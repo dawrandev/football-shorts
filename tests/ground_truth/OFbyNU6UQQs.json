@@ -1,0 +1,54 @@
+{
+  "match": "OFbyNU6UQQs.mp4",
+  "title": "Portugal v Spain, 2018 FIFA World Cup, group stage",
+  "home": "Portugal",
+  "away": "Spain",
+  "broadcaster": "FIFA 2018",
+  "first_half_kickoff": "00:02:30",
+  "second_half_kickoff": "00:49:19",
+  "goals": [
+    {
+      "minute": "4",
+      "team": "home",
+      "scorer": "Ronaldo (pen)",
+      "score_after": "1-0",
+      "video_time": "00:06:05"
+    },
+    {
+      "minute": "24",
+      "team": "away",
+      "scorer": "Diego Costa",
+      "score_after": "1-1",
+      "video_time": "00:25:45"
+    },
+    {
+      "minute": "44",
+      "team": "home",
+      "scorer": "Ronaldo",
+      "score_after": "2-1",
+      "video_time": "00:46:15"
+    },
+    {
+      "minute": "55",
+      "team": "away",
+      "scorer": "Diego Costa",
+      "score_after": "2-2",
+      "video_time": "00:58:40"
+    },
+    {
+      "minute": "58",
+      "team": "away",
+      "scorer": "Nacho",
+      "score_after": "2-3",
+      "video_time": "01:01:38"
+    },
+    {
+      "minute": "88",
+      "team": "home",
+      "scorer": "Ronaldo",
+      "score_after": "3-3",
+      "video_time": "01:31:25"
+    }
+  ],
+  "note": "video_time = moment the goal is scored (score bug updates within ~10s); FIFA archive upload, an ad banner sometimes shrinks the frame"
+}

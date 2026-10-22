@@ -23,6 +23,41 @@ class OutputConfig:
 
 
 @dataclass(frozen=True)
+class AudioPeaksConfig:
+    hop_seconds: float
+    baseline_seconds: float
+    smooth_seconds: float
+    min_gap_seconds: float
+    min_zscore: float
+    min_db_rise: float
+
+
+@dataclass(frozen=True)
+class CommentaryConfig:
+    model: str
+    compute_type: str
+    language: str | None
+    phrases: dict[str, float]
+
+
+@dataclass(frozen=True)
+class EventsConfig:
+    merge_seconds: float
+    max_candidates: int
+    audio: AudioPeaksConfig
+    commentary: CommentaryConfig
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> EventsConfig:
+        return cls(
+            merge_seconds=raw["merge_seconds"],
+            max_candidates=raw["max_candidates"],
+            audio=AudioPeaksConfig(**raw["audio"]),
+            commentary=CommentaryConfig(**raw["commentary"]),
+        )
+
+
+@dataclass(frozen=True)
 class PathsConfig:
     matches: Path
     outputs: Path
@@ -32,6 +67,7 @@ class PathsConfig:
 class AppConfig:
     clip: ClipConfig
     output: OutputConfig
+    events: EventsConfig
     paths: PathsConfig
 
     LAYOUTS = ("crop", "blur")
@@ -42,6 +78,7 @@ class AppConfig:
         config = cls(
             clip=ClipConfig(**raw["clip"]),
             output=OutputConfig(**raw["output"]),
+            events=EventsConfig.from_dict(raw["events"]),
             paths=PathsConfig(**{k: Path(v) for k, v in raw["paths"].items()}),
         )
         config._validate()

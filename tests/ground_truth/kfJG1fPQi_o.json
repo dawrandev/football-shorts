@@ -1,0 +1,61 @@
+{
+  "match": "kfJG1fPQi_o.mp4",
+  "title": "France v Argentina, 2018 FIFA World Cup, round of 16",
+  "home": "France",
+  "away": "Argentina",
+  "broadcaster": "FIFA 2018",
+  "first_half_kickoff": "00:01:33",
+  "second_half_kickoff": "00:49:03",
+  "goals": [
+    {
+      "minute": "13",
+      "team": "home",
+      "scorer": "Griezmann (pen)",
+      "score_after": "1-0",
+      "video_time": "00:14:25"
+    },
+    {
+      "minute": "41",
+      "team": "away",
+      "scorer": "Di Maria",
+      "score_after": "1-1",
+      "video_time": "00:42:25"
+    },
+    {
+      "minute": "48",
+      "team": "away",
+      "scorer": "Mercado",
+      "score_after": "1-2",
+      "video_time": "00:51:45"
+    },
+    {
+      "minute": "57",
+      "team": "home",
+      "scorer": "Pavard",
+      "score_after": "2-2",
+      "video_time": "01:00:55"
+    },
+    {
+      "minute": "64",
+      "team": "home",
+      "scorer": "Mbappe",
+      "score_after": "3-2",
+      "video_time": "01:07:15"
+    },
+    {
+      "minute": "68",
+      "team": "home",
+      "scorer": "Mbappe",
+      "score_after": "4-2",
+      "video_time": "01:11:45"
+    },
+    {
+      "minute": "90+3",
+      "team": "away",
+      "scorer": "Aguero",
+      "score_after": "4-3",
+      "video_time": "01:36:25"
+    }
+  ],
+  "note": "video_time = moment the goal is scored (score bug updates within ~10s)"
+}

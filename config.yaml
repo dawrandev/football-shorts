@@ -12,6 +12,40 @@ output:
   encoder: h264_nvenc
   bitrate: 12M
 
+# Candidate moment detection (M1)
+events:
+  merge_seconds: 35        # candidates within this window after the first one collapse into one
+  max_candidates: 50
+  audio:
+    hop_seconds: 0.5
+    baseline_seconds: 120  # rolling median window that removes slow loudness drift
+    smooth_seconds: 4
+    min_gap_seconds: 20
+    min_zscore: 2.0
+    min_db_rise: 3.0       # peak must also be this much louder than the baseline
+  commentary:
+    model: large-v3-turbo
+    compute_type: float16
+    language: null         # null = auto detect
+    # regex searched in the lowercased running transcript -> weight
+    phrases:
+      '\bgo+a+l+\b': 3.0
+      '\bgo+l+\b': 3.0
+      '\bгол+\b': 3.0
+      '\b(scores?|scored)\b': 2.0
+      '\b\d\s*-\s*\d\b': 2.0                      # "it's 1-0", Whisper writes "1 -0"
+      '\bequali[sz]': 2.5
+      '\b(back in front|in front again|first blood|breakthrough)\b': 2.0
+      '\bwhat an? (goal|shot|strike|finish|header|effort)\b': 3.0
+      '\b(and in|deflected and in|in it goes|into the net|top corner|bottom corner)\b': 2.0
+      '\bstrikes?\b': 1.0
+      '\b(genius|exquisite|sensational|stunning|unbelievable|incredible|wonderful|brilliant|magnificent)\b': 1.0
+      '\bpenalt(y|ies)\b': 1.5
+      '\bпенальт': 1.5
+      '\b(saved?|save|denied)\b': 1.0
+      '\bfree kick\b': 0.5
+      '\b(chance|header|off the post|crossbar|woodwork)\b': 0.5
+
 paths:
   matches: data/matches
   outputs: data/outputs

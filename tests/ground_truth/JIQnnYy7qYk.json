@@ -1,0 +1,47 @@
+{
+  "match": "JIQnnYy7qYk.mp4",
+  "title": "Brazil v Korea Republic, 2022 FIFA World Cup, round of 16",
+  "home": "Brazil",
+  "away": "Korea Republic",
+  "broadcaster": "FIFA 2022",
+  "first_half_kickoff": "00:02:42",
+  "second_half_kickoff": "00:54:30",
+  "goals": [
+    {
+      "minute": "7",
+      "team": "home",
+      "scorer": "Vinicius Junior",
+      "score_after": "1-0",
+      "video_time": "00:09:25"
+    },
+    {
+      "minute": "13",
+      "team": "home",
+      "scorer": "Neymar (pen)",
+      "score_after": "2-0",
+      "video_time": "00:15:05"
+    },
+    {
+      "minute": "29",
+      "team": "home",
+      "scorer": "Richarlison",
+      "score_after": "3-0",
+      "video_time": "00:30:55"
+    },
+    {
+      "minute": "36",
+      "team": "home",
+      "scorer": "Lucas Paqueta",
+      "score_after": "4-0",
+      "video_time": "00:38:25"
+    },
+    {
+      "minute": "76",
+      "team": "away",
+      "scorer": "Paik Seung-ho",
+      "score_after": "4-1",
+      "video_time": "01:25:25"
+    }
+  ],
+  "note": "video_time = moment the goal is scored (score bug updates within ~10s); 2022 graphics, clock left of the bug"
+}

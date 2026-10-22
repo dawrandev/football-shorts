@@ -91,6 +91,33 @@ Har bir milestone tugagach to'xtaymiz, natijani ko'rsataman va keyingisi uchun r
 - Tasdiqlangan yoki rad etilgan kliplardan o'z highlight klassifikatorimiz uchun dataset yig'iladi.
 - Keyin sayt: API, ishlar navbati va foydalanuvchilar.
 
+## 3a. Strategiya yangilanishi (2026-10-22)
+
+`docs/research/Futbol highlight model strategiyasi.md` hisobotidan keyin rejaga quyidagilar qo'shildi:
+- **Dataset yig'ish M1'dan boshlanadi.** M2 OCR natijasini "weak label" sifatida saqlaydi. M3 ga oddiy review CLI qo'shiladi (accept/reject + sabab), u PLAN'da avval M6'da edi.
+- **M4 to'rt qismga bo'lindi.**
+  - **M4a:** RF-DETR-M bilan prototip.
+  - **M4b:** o'z kadrlarimiz belgilanadi (Grounding DINO + SAM2 → CVAT) va RF-DETR qayta o'qitiladi.
+  - **M4c:** to'p uchun 3 kadrli heatmap modeli (WASB uslubida).
+  - **M4d:** kadr qayerga qarashi tartib bilan tanlanadi: to'p, u ko'rinmasa Kalman bashorati, keyin o'yinchilar markazi, oxirida kadr markazi. Natija offline silliqlanadi.
+- **M6 qadamlari:**
+  - **M6a:** LightGBM ranker. U muzlatilgan encoder feature'lari (V-JEPA 2, SigLIP2/DINOv2, audio) va bizning signallarimiz ustida o'qitiladi.
+  - **M6b:** Qwen3-VL lokal labeler.
+  - **M6c:** Gemini faqat runtime'da ishlaydi, uning javoblari training'ga kirmaydi.
+  - **M6d:** temporal head.
+  - **M6e:** sayt.
+- **Litsenziya qoidalari:**
+  - **Ishlatilmaydi:** VideoMAE V2 weights (NC), DEIMv2 (2026-08 dan NC), RF-DETR XL/2XL (PML), Ultralytics va YOLOv10/12/13 (AGPL), SoccerNet'da o'qitilgan weights.
+
+## 3b. Natijalar
+
+- **M0 ✅** skelet, `fshorts probe`, NVENC tekshirildi.
+- **M1 ⚠️ 16/18 gol (89%) ≤50 nomzod bilan**, 3 ta FIFA match'da, maqsad ≥90% edi.
+  - **Ishlash vaqti:** bir match ~90 s (Whisper large-v3-turbo + audio).
+  - **Manbalar:** asosiy signal sharhlovchi iboralari. FIFA arxiv ovozida stadion hayqirig'i golni shovqindan ajratmaydi (gollarda +3.6–6 dB, oddiy kadrlarning p90'i esa 4 dB).
+  - **Tushib qolgan 2 gol:** ikkalasida ham sharhlovchi gol iborasini aytmagan va ovoz piki bo'lmagan. Ularni M2 (hisob o'zgarishi) qoplaydi.
+  - **Tuning:** shu 3 match'ga moslab sozlash to'xtatildi, overfitting xavfi bor.
+
 ## 4. Xatarlar
 
 - **Hisob paneli har telekanalda turlicha.** ROI preset'lar bilan hal qilinadi. Yangi telekanal = yangi preset.
