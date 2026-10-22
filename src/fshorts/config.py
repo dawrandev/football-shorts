@@ -10,7 +10,12 @@ import yaml
 class ClipConfig:
     pre_seconds: float
     post_seconds: float
+    goal_pre_seconds: float
+    goal_post_seconds: float
     include_replay: bool
+    replay_max_seconds: float
+    max_chances: int
+    snap_seconds: float
 
 
 @dataclass(frozen=True)
@@ -73,6 +78,7 @@ class ScoreboardConfig:
 class PathsConfig:
     matches: Path
     outputs: Path
+    labels: Path
 
 
 @dataclass(frozen=True)

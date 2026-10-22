@@ -32,6 +32,10 @@ class ScoreChange:
     def to_dict(self) -> dict:
         return {"time": self.time, "before": list(self.before), "after": list(self.after), "kind": self.kind}
 
+    @classmethod
+    def from_dict(cls, data: dict) -> ScoreChange:
+        return cls(data["time"], tuple(data["before"]), tuple(data["after"]))
+
 
 class ScoreTimeline:
     """Debounces noisy per-second readings into confirmed score changes.

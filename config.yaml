@@ -1,8 +1,13 @@
 # Clip window around a detected event, in seconds
 clip:
-  pre_seconds: 12
+  pre_seconds: 12          # chances: the commentator reacts after the action
   post_seconds: 6
+  goal_pre_seconds: 20     # goals: room for the build-up
+  goal_post_seconds: 8
   include_replay: true
+  replay_max_seconds: 25   # hidden score bug after a goal = celebration and replays
+  max_chances: 15
+  snap_seconds: 4          # move clip edges to a camera cut this close
 
 # Final Shorts render settings
 output:
@@ -33,7 +38,7 @@ events:
       '\bgo+l+\b': 3.0
       '\bгол+\b': 3.0
       '\b(scores?|scored)\b': 2.0
-      '\b\d\s*-\s*\d\b': 2.0                      # "it's 1-0", Whisper writes "1 -0"
+      '(?<![\d-])\d\s*-\s*\d(?![\d-])': 2.0       # "it's 1-0" (Whisper writes "1 -0"), not formations like 4-4-2
       '\bequali[sz]': 2.5
       '\b(back in front|in front again|first blood|breakthrough)\b': 2.0
       '\bwhat an? (goal|shot|strike|finish|header|effort)\b': 3.0
@@ -56,3 +61,4 @@ scoreboard:
 paths:
   matches: data/matches
   outputs: data/outputs
+  labels: data/labels/human

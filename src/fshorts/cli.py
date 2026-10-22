@@ -6,6 +6,7 @@ import sys
 import time
 from pathlib import Path
 
+from fshorts.clipping import ClipCutter, ClipPlanner, FfmpegSceneCutDetector, SceneSnapper
 from fshorts.config import AppConfig
 from fshorts.evaluation import GoalDetectionEvaluator, GoalRecallEvaluator, GroundTruth
 from fshorts.events import (
@@ -24,8 +25,11 @@ from fshorts.scoreboard import (
     GoalExtractor,
     ScoreBugParser,
     ScoreBugReader,
+    ScoreChange,
+    ScoreReading,
     ScoreTimeline,
 )
+from fshorts.review import LabelStore, ReviewSession
 from fshorts.workspace import MatchWorkspace
 
 DEFAULT_CONFIG = Path("config.yaml")
@@ -105,6 +109,56 @@ def _cmd_goals(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_json(path: Path, step: str):
+    if not path.is_file():
+        raise FileNotFoundError(f"{path} missing, run 'fshorts {step}' first")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _cmd_cut(args: argparse.Namespace) -> int:
+    config = AppConfig.load(Path(args.config))
+    video = Path(args.video)
+    workspace = MatchWorkspace(config.paths.outputs, video)
+
+    goals = [ScoreChange.from_dict(g) for g in _load_json(workspace.goals, "goals")["goals"]]
+    readings = [ScoreReading.from_dict(r) for r in _load_json(workspace.score_readings, "goals")]
+    candidates = [Candidate.from_dict(c) for c in _load_json(workspace.candidates, "candidates")]
+    duration = FfprobeProber().probe(video).duration_seconds
+
+    started = time.perf_counter()
+    plans = ClipPlanner(config.clip).plan(goals, readings, candidates, duration)
+    snapper = SceneSnapper(FfmpegSceneCutDetector(), config.clip.snap_seconds)
+    cutter = ClipCutter(config.output.encoder, config.output.bitrate)
+
+    clips = []
+    for number, plan in enumerate(plans, 1):
+        plan = snapper.snap(video, plan)
+        clip_id = f"{number:02d}_{plan.kind}_{int(plan.anchor)}"
+        cutter.cut(video, plan, workspace.clips_dir / f"{clip_id}.mp4")
+        clips.append({
+            "id": clip_id, "file": f"{clip_id}.mp4", "kind": plan.kind, "label": plan.label,
+            "anchor": plan.anchor, "start": round(plan.start, 2), "end": round(plan.end, 2), "score": plan.score,
+        })
+        print(f"  {clip_id}  {_format_time(plan.start)}-{_format_time(plan.end)}  {plan.label}")
+
+    workspace.clips.write_text(json.dumps(clips, ensure_ascii=False, indent=1), encoding="utf-8")
+    kinds = [c["kind"] for c in clips]
+    print(f"{kinds.count('goal')} goal + {kinds.count('chance')} chance clips -> {workspace.clips_dir} "
+          f"({time.perf_counter() - started:.0f}s)")
+    return 0
+
+
+def _cmd_review(args: argparse.Namespace) -> int:
+    config = AppConfig.load(Path(args.config))
+    video = Path(args.video)
+    workspace = MatchWorkspace(config.paths.outputs, video)
+    store = LabelStore(config.paths.labels / f"{video.stem}.json")
+
+    reviewed = ReviewSession(store).run(_load_json(workspace.clips, "cut"), workspace.clips_dir)
+    print(f"{reviewed} clips reviewed, labels in {config.paths.labels / f'{video.stem}.json'}")
+    return 0
+
+
 def _cmd_evaluate(args: argparse.Namespace) -> int:
     config = AppConfig.load(Path(args.config))
     video = Path(args.video)
@@ -149,6 +203,14 @@ def build_parser() -> argparse.ArgumentParser:
     goals = commands.add_parser("goals", help="confirm goals from the on-screen score bug")
     goals.add_argument("video")
     goals.set_defaults(handler=_cmd_goals)
+
+    cut = commands.add_parser("cut", help="plan and cut 16:9 highlight clips")
+    cut.add_argument("video")
+    cut.set_defaults(handler=_cmd_cut)
+
+    review = commands.add_parser("review", help="accept or reject cut clips (training labels)")
+    review.add_argument("video")
+    review.set_defaults(handler=_cmd_review)
 
     evaluate = commands.add_parser("evaluate", help="compare candidates and goals with the ground truth")
     evaluate.add_argument("video")

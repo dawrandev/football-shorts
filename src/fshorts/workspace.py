@@ -30,3 +30,13 @@ class MatchWorkspace:
     @property
     def goals(self) -> Path:
         return self.root / "goals.json"
+
+    @property
+    def clips_dir(self) -> Path:
+        path = self.root / "clips"
+        path.mkdir(exist_ok=True)
+        return path
+
+    @property
+    def clips(self) -> Path:
+        return self.root / "clips.json"

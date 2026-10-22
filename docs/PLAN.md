@@ -123,6 +123,12 @@ Har bir milestone tugagach to'xtaymiz, natijani ko'rsataman va keyingisi uchun r
   - **Aniqlik:** hisob o'zgarish vaqti gol vaqtidan −13…+70 s farq qiladi. Katta farq panel takror ko'rsatilayotganda yashirin turgan hollarda bo'ladi.
   - **Vaqt:** bir match uchun ~5–6 daqiqa (OCR har sekundda). Keyin tezlashtirish mumkin: panel kadrlar orasida o'zgarmasa, OCR o'tkazib yuboriladi.
   - **Weak label:** `goals.json` + `score_readings.json` (soat bilan) match workspace'ida saqlanadi.
+- **M3 ✅ `fshorts cut` + `fshorts review`.** 3 ta match'dan 18 ta gol klipi va 45 ta xavfli vaziyat klipi chiqdi. Bir match ~55 s'da kesiladi (NVENC).
+  - **Gol lahzasi:** odatda hisob o'zgargan vaqt olinadi. Panel uzoq yashirin turgan bo'lsa, oraliqdagi kuchli sharhlovchi reaksiyasi ishlatiladi. Nacho goli: 3701 s, belgi 3698 s.
+  - **Gol klipi:** −20/+8 s, ustiga takror. Panel yashirin turgan oraliq takror deb olinadi, ≤25 s.
+  - **Xavfli vaziyatlar:** kliplar −12/+6 s, gol kliplari bilan ustma-ust tushmaydi. Faqat panel ko'ringan oraliqdan olinadi, ya'ni studiya suhbati kirmaydi. "4-4-2" kabi sxemalar hisob deb sanalmaydi.
+  - **Kamera almashishi:** chegaralar FFmpeg `scdet` topgan joylarga suriladi. Boshlanish faqat oldinga, tugash faqat keyinga suriladi.
+  - **Review:** klip pleyerda ochiladi, y/n va sabab kiritiladi. Natija `data/labels/human/<match>.json` ga yoziladi, keyingi modelning training ma'lumoti shu bo'ladi.
 
 ## 4. Xatarlar
 

@@ -1,7 +1,9 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from fshorts.config import AudioPeaksConfig
+from fshorts.config import AppConfig, AudioPeaksConfig
 from fshorts.events import (
     AudioExcitementSource,
     Candidate,
@@ -68,6 +70,17 @@ def words_from(text: str, start: float = 0.0, step: float = 0.5) -> list[Word]:
 def test_phrase_matcher(text, expected):
     hits = PhraseMatcher(PHRASES).find(words_from(text))
     assert [h.phrase for h in hits] == expected
+
+
+@pytest.mark.parametrize(
+    "text, matched",
+    [("it's 1 -0 Portugal", True), ("now 2-1 to France", True), ("they line up 4-4-2", False),
+     ("a 4-3-3 shape", False)],
+)
+def test_repo_score_phrase_skips_formations(text, matched):
+    phrases = AppConfig.load(Path(__file__).resolve().parents[1] / "config.yaml").events.commentary.phrases
+    hits = [h for h in PhraseMatcher(phrases).find(words_from(text)) if any(ch.isdigit() for ch in h.phrase)]
+    assert bool(hits) == matched
 
 
 def test_phrase_hit_takes_time_of_first_word():
