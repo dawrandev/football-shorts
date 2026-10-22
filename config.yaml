@@ -1,0 +1,17 @@
+# Clip window around a detected event, in seconds
+clip:
+  pre_seconds: 12
+  post_seconds: 6
+  include_replay: true
+
+# Final Shorts render settings
+output:
+  width: 1080
+  height: 1920
+  layout: crop        # crop = follow the ball, blur = 16:9 over blurred background
+  encoder: h264_nvenc
+  bitrate: 12M
+
+paths:
+  matches: data/matches
+  outputs: data/outputs

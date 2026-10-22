@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+
+# Media and run outputs never go into git
+data/matches/*
+data/outputs/*
+!data/matches/.gitkeep
+!data/outputs/.gitkeep
+*.mp4
+*.mkv
+*.mov
+*.wav
+
+# Model weights and datasets
+models/
+datasets/
+*.pt
+*.pth
+*.onnx
+
+# Local
+.env
+.idea/
+.vscode/

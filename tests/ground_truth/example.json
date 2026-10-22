@@ -1,0 +1,15 @@
+{
+  "match": "example.mp4",
+  "home": "Home FC",
+  "away": "Away FC",
+  "broadcaster": "channel name",
+  "first_half_kickoff": "00:02:15",
+  "second_half_kickoff": "01:01:40",
+  "goals": [
+    {"minute": "23", "team": "home", "video_time": "00:25:38", "score_after": "1-0"},
+    {"minute": "45+2", "team": "away", "video_time": "00:49:52", "score_after": "1-1"}
+  ],
+  "chances": [
+    {"minute": "67", "video_time": "01:08:10", "kind": "save"}
+  ]
+}
