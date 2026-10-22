@@ -46,6 +46,13 @@ events:
       '\bfree kick\b': 0.5
       '\b(chance|header|off the post|crossbar|woodwork)\b': 0.5
 
+# Goal confirmation from the on-screen score (M2)
+scoreboard:
+  fps: 1
+  confirmations: 3         # consecutive agreeing readings before a new score is accepted
+  min_confidence: 0.3
+  region: [0, 0, 1000, 140]  # x, y, width, height on a 1920x1080 frame; covers the top-left score bug
+
 paths:
   matches: data/matches
   outputs: data/outputs

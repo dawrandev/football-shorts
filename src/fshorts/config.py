@@ -58,6 +58,18 @@ class EventsConfig:
 
 
 @dataclass(frozen=True)
+class ScoreboardConfig:
+    fps: float
+    confirmations: int
+    min_confidence: float
+    region: tuple[int, int, int, int]
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> ScoreboardConfig:
+        return cls(**{**raw, "region": tuple(raw["region"])})
+
+
+@dataclass(frozen=True)
 class PathsConfig:
     matches: Path
     outputs: Path
@@ -68,6 +80,7 @@ class AppConfig:
     clip: ClipConfig
     output: OutputConfig
     events: EventsConfig
+    scoreboard: ScoreboardConfig
     paths: PathsConfig
 
     LAYOUTS = ("crop", "blur")
@@ -79,6 +92,7 @@ class AppConfig:
             clip=ClipConfig(**raw["clip"]),
             output=OutputConfig(**raw["output"]),
             events=EventsConfig.from_dict(raw["events"]),
+            scoreboard=ScoreboardConfig.from_dict(raw["scoreboard"]),
             paths=PathsConfig(**{k: Path(v) for k, v in raw["paths"].items()}),
         )
         config._validate()

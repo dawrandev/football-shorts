@@ -53,6 +53,40 @@ class RecallReport:
         return len(self.found) / total if total else 1.0
 
 
+@dataclass(frozen=True)
+class DetectionReport:
+    matched: tuple[LabelledGoal, ...]
+    missed: tuple[LabelledGoal, ...]
+    false_times: tuple[float, ...]
+
+
+class GoalDetectionEvaluator:
+    """One-to-one matching of detected goal times to labelled goals.
+
+    The score bug changes after the goal (instantly, or after the replay when the
+    bug is hidden), so a detection may lag the label by up to `after_seconds`.
+    """
+
+    def __init__(self, before_seconds: float = 15.0, after_seconds: float = 75.0) -> None:
+        self._before = before_seconds
+        self._after = after_seconds
+
+    def evaluate(self, truth: GroundTruth, detected_times: list[float]) -> DetectionReport:
+        unused = sorted(detected_times)
+        matched, missed = [], []
+        for goal in truth.goals:
+            hit = next(
+                (t for t in unused if goal.video_time - self._before <= t <= goal.video_time + self._after),
+                None,
+            )
+            if hit is None:
+                missed.append(goal)
+            else:
+                matched.append(goal)
+                unused.remove(hit)
+        return DetectionReport(tuple(matched), tuple(missed), tuple(unused))
+
+
 class GoalRecallEvaluator:
     """A goal counts as found when some candidate lies within the tolerance window around it."""
 

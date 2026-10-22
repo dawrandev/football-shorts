@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 from fshorts.config import AppConfig
-from fshorts.evaluation import GoalRecallEvaluator, GroundTruth
+from fshorts.evaluation import GoalDetectionEvaluator, GoalRecallEvaluator, GroundTruth
 from fshorts.events import (
     AudioExcitementSource,
     CachedTranscriber,
@@ -17,7 +17,15 @@ from fshorts.events import (
     PhraseMatcher,
     WhisperTranscriber,
 )
-from fshorts.ingest import AudioExtractor, FfprobeProber, ProbeError
+from fshorts.ingest import AudioExtractor, FfprobeProber, FrameSampler, ProbeError, Region
+from fshorts.scoreboard import (
+    CachedScoreBugReader,
+    EasyOcrEngine,
+    GoalExtractor,
+    ScoreBugParser,
+    ScoreBugReader,
+    ScoreTimeline,
+)
 from fshorts.workspace import MatchWorkspace
 
 DEFAULT_CONFIG = Path("config.yaml")
@@ -69,20 +77,59 @@ def _cmd_candidates(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_goals(args: argparse.Namespace) -> int:
+    config = AppConfig.load(Path(args.config))
+    video = Path(args.video)
+    workspace = MatchWorkspace(config.paths.outputs, video)
+    board = config.scoreboard
+
+    started = time.perf_counter()
+    reader = CachedScoreBugReader(
+        ScoreBugReader(FrameSampler(), EasyOcrEngine(), ScoreBugParser(board.min_confidence)),
+        workspace.score_readings,
+    )
+    readings = reader.read(video, Region(*board.region), board.fps)
+    changes = ScoreTimeline(board.confirmations).changes(readings)
+    goals = GoalExtractor().goals(changes)
+
+    workspace.goals.write_text(
+        json.dumps({"changes": [c.to_dict() for c in changes], "goals": [g.to_dict() for g in goals]}, indent=1),
+        encoding="utf-8",
+    )
+    print(f"{len(readings)} score readings, {len(changes)} changes ({time.perf_counter() - started:.0f}s)")
+    for goal in goals:
+        print(f"  {_format_time(goal.time)}  {goal.before[0]}-{goal.before[1]} -> {goal.after[0]}-{goal.after[1]}")
+    for change in changes:
+        if change.kind in ("revert", "jump"):
+            print(f"  {change.kind} at {_format_time(change.time)}: {change.before} -> {change.after}")
+    return 0
+
+
 def _cmd_evaluate(args: argparse.Namespace) -> int:
     config = AppConfig.load(Path(args.config))
     video = Path(args.video)
     workspace = MatchWorkspace(config.paths.outputs, video)
     truth = GroundTruth.load(GROUND_TRUTH_DIR / f"{video.stem}.json")
-    candidates = [
-        Candidate.from_dict(c) for c in json.loads(workspace.candidates.read_text(encoding="utf-8"))
-    ]
 
-    report = GoalRecallEvaluator().evaluate(truth, candidates)
-    print(f"goal recall: {len(report.found)}/{len(report.found) + len(report.missed)} "
-          f"({report.recall:.0%}) with {report.candidate_count} candidates")
-    for goal in report.missed:
-        print(f"  missed {goal.minute}' ({goal.score_after}) at {_format_time(goal.video_time)}")
+    if workspace.candidates.is_file():
+        candidates = [
+            Candidate.from_dict(c) for c in json.loads(workspace.candidates.read_text(encoding="utf-8"))
+        ]
+        report = GoalRecallEvaluator().evaluate(truth, candidates)
+        print(f"candidates: goal recall {len(report.found)}/{len(truth.goals)} "
+              f"({report.recall:.0%}) with {report.candidate_count} candidates")
+        for goal in report.missed:
+            print(f"  missed {goal.minute}' ({goal.score_after}) at {_format_time(goal.video_time)}")
+
+    if workspace.goals.is_file():
+        detected = [g["time"] for g in json.loads(workspace.goals.read_text(encoding="utf-8"))["goals"]]
+        detection = GoalDetectionEvaluator().evaluate(truth, detected)
+        print(f"scoreboard: {len(detection.matched)}/{len(truth.goals)} goals, "
+              f"{len(detection.false_times)} false")
+        for goal in detection.missed:
+            print(f"  missed {goal.minute}' ({goal.score_after}) at {_format_time(goal.video_time)}")
+        for false_time in detection.false_times:
+            print(f"  false goal at {_format_time(false_time)}")
     return 0
 
 
@@ -99,7 +146,11 @@ def build_parser() -> argparse.ArgumentParser:
     candidates.add_argument("video")
     candidates.set_defaults(handler=_cmd_candidates)
 
-    evaluate = commands.add_parser("evaluate", help="compare candidates with the ground truth goals")
+    goals = commands.add_parser("goals", help="confirm goals from the on-screen score bug")
+    goals.add_argument("video")
+    goals.set_defaults(handler=_cmd_goals)
+
+    evaluate = commands.add_parser("evaluate", help="compare candidates and goals with the ground truth")
     evaluate.add_argument("video")
     evaluate.set_defaults(handler=_cmd_evaluate)
 

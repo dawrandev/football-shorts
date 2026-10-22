@@ -22,3 +22,11 @@ class MatchWorkspace:
     @property
     def candidates(self) -> Path:
         return self.root / "candidates.json"
+
+    @property
+    def score_readings(self) -> Path:
+        return self.root / "score_readings.json"
+
+    @property
+    def goals(self) -> Path:
+        return self.root / "goals.json"

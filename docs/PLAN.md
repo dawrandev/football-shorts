@@ -117,6 +117,12 @@ Har bir milestone tugagach to'xtaymiz, natijani ko'rsataman va keyingisi uchun r
   - **Manbalar:** asosiy signal sharhlovchi iboralari. FIFA arxiv ovozida stadion hayqirig'i golni shovqindan ajratmaydi (gollarda +3.6–6 dB, oddiy kadrlarning p90'i esa 4 dB).
   - **Tushib qolgan 2 gol:** ikkalasida ham sharhlovchi gol iborasini aytmagan va ovoz piki bo'lmagan. Ularni M2 (hisob o'zgarishi) qoplaydi.
   - **Tuning:** shu 3 match'ga moslab sozlash to'xtatildi, overfitting xavfi bor.
+- **M2 ✅ 18/18 gol, 0 noto'g'ri gol**, 3 ta match'da (2018 va 2022 grafikalari).
+  - **Usul:** EasyOCR yuqori chap 1000×140 hududni 1 fps tezlikda o'qiydi va ikki jamoa kodi orasidagi raqamlarni oladi. Layout'ga bog'lanmagan, FIFA banneri panelni surganda ham ishlaydi.
+  - **Debounce:** yangi hisob 3 marta ketma-ket o'qilsa qabul qilinadi. VAR bekor qilsa, gol o'chiriladi.
+  - **Aniqlik:** hisob o'zgarish vaqti gol vaqtidan −13…+70 s farq qiladi. Katta farq panel takror ko'rsatilayotganda yashirin turgan hollarda bo'ladi.
+  - **Vaqt:** bir match uchun ~5–6 daqiqa (OCR har sekundda). Keyin tezlashtirish mumkin: panel kadrlar orasida o'zgarmasa, OCR o'tkazib yuboriladi.
+  - **Weak label:** `goals.json` + `score_readings.json` (soat bilan) match workspace'ida saqlanadi.
 
 ## 4. Xatarlar
 
