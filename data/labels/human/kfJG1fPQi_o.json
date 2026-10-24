@@ -1,0 +1,42 @@
+[
+ {
+  "clip_id": "01_chance_564",
+  "kind": "chance",
+  "start": 548.43,
+  "end": 571.7,
+  "accepted": false,
+  "reason": "missed_action",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "chance found but cut too early; the strike is missing"
+ },
+ {
+  "clip_id": "02_goal_858",
+  "kind": "goal",
+  "start": 837.4,
+  "end": 867.27,
+  "accepted": true,
+  "reason": "goal",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "well cut"
+ },
+ {
+  "clip_id": "03_chance_1038",
+  "kind": "chance",
+  "start": 1026.15,
+  "end": 1048.1,
+  "accepted": false,
+  "reason": "boring",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "no chance"
+ },
+ {
+  "clip_id": "12_goal_3658",
+  "kind": "goal",
+  "start": 3638.0,
+  "end": 3669.0,
+  "accepted": true,
+  "reason": "goal",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "well cut; reference example"
+ }
+]

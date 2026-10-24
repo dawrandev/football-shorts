@@ -1,0 +1,202 @@
+[
+ {
+  "clip_id": "01_goal_565",
+  "kind": "goal",
+  "start": 545.0,
+  "end": 592.1,
+  "accepted": true,
+  "reason": "goal",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "correct goal; build-up and aftermath a bit long (user will explain a length option later)"
+ },
+ {
+  "clip_id": "02_chance_835",
+  "kind": "chance",
+  "start": 819.63,
+  "end": 844.2,
+  "accepted": false,
+  "reason": "missed_action",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "penalty about to be taken; the kick itself fell into 03_goal_902; should be one clip"
+ },
+ {
+  "clip_id": "03_goal_902",
+  "kind": "goal",
+  "start": 878.23,
+  "end": 910.13,
+  "accepted": true,
+  "reason": "goal",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "penalty kick and goal cut very well"
+ },
+ {
+  "clip_id": "04_chance_1192",
+  "kind": "chance",
+  "start": 1180.48,
+  "end": 1198.48,
+  "accepted": false,
+  "reason": "boring",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "no chance; commentary talked about an earlier save (real long shot ~1164 missed)"
+ },
+ {
+  "clip_id": "05_chance_1539",
+  "kind": "chance",
+  "start": 1527.38,
+  "end": 1547.07,
+  "accepted": false,
+  "reason": "boring",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "no chance; stats talk"
+ },
+ {
+  "clip_id": "06_goal_1859",
+  "kind": "goal",
+  "start": 1838.23,
+  "end": 1867.0,
+  "accepted": true,
+  "reason": "goal",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "ideal cut; reference example"
+ },
+ {
+  "clip_id": "07_chance_1940",
+  "kind": "chance",
+  "start": 1928.27,
+  "end": 1946.27,
+  "accepted": true,
+  "reason": "replay_only",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "replay of goal 3 from other angles; keep as a separate goal_replay category"
+ },
+ {
+  "clip_id": "08_chance_2074",
+  "kind": "chance",
+  "start": 2062.8,
+  "end": 2080.8,
+  "accepted": false,
+  "reason": "missed_action",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "only a small part of a chance replay; live play before it is missing"
+ },
+ {
+  "clip_id": "09_chance_2136",
+  "kind": "chance",
+  "start": 2124.0,
+  "end": 2142.0,
+  "accepted": false,
+  "reason": "boring",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "no chance"
+ },
+ {
+  "clip_id": "10_chance_2281",
+  "kind": "chance",
+  "start": 2269.41,
+  "end": 2287.41,
+  "accepted": false,
+  "reason": "replay_only",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "replay of the previous goal, other angle; not a chance"
+ },
+ {
+  "clip_id": "11_goal_2309",
+  "kind": "goal",
+  "start": 2289.0,
+  "end": 2317.27,
+  "accepted": true,
+  "reason": "junk_frames",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "goal found well; unwanted frames at the start (replay tail)"
+ },
+ {
+  "clip_id": "12_chance_2539",
+  "kind": "chance",
+  "start": 2527.66,
+  "end": 2545.66,
+  "accepted": true,
+  "reason": "skill",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "Vinicius skill move; a player highlight category, title like 'Vini highlight BRA vs KOR'"
+ },
+ {
+  "clip_id": "13_chance_3409",
+  "kind": "chance",
+  "start": 3397.34,
+  "end": 3415.34,
+  "accepted": false,
+  "reason": "replay_only",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "chance shown only as replay; need the live build-up and the chance"
+ },
+ {
+  "clip_id": "14_chance_4215",
+  "kind": "chance",
+  "start": 4203.5,
+  "end": 4221.5,
+  "accepted": false,
+  "reason": "boring",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "no chance"
+ },
+ {
+  "clip_id": "15_chance_4761",
+  "kind": "chance",
+  "start": 4747.77,
+  "end": 4767.5,
+  "accepted": false,
+  "reason": "boring",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "ordinary foul and substitution"
+ },
+ {
+  "clip_id": "16_goal_5123",
+  "kind": "goal",
+  "start": 5101.67,
+  "end": 5133.73,
+  "accepted": true,
+  "reason": "goal",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "well cut; reference example"
+ },
+ {
+  "clip_id": "17_chance_5555",
+  "kind": "chance",
+  "start": 5543.5,
+  "end": 5561.5,
+  "accepted": false,
+  "reason": "replay_only",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "replay running; start earlier from the live play or keep replay as its own category"
+ },
+ {
+  "clip_id": "18_chance_5593",
+  "kind": "chance",
+  "start": 5581.0,
+  "end": 5599.0,
+  "accepted": false,
+  "reason": "missed_action",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "chance detected but clip shows bench players and ends just as the chance starts"
+ },
+ {
+  "clip_id": "19_chance_5765",
+  "kind": "chance",
+  "start": 5753.0,
+  "end": 5774.03,
+  "accepted": false,
+  "reason": "replay_only",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "unwanted replay and no chance"
+ },
+ {
+  "clip_id": "20_chance_5877",
+  "kind": "chance",
+  "start": 5865.0,
+  "end": 5883.0,
+  "accepted": true,
+  "reason": "chance",
+  "labelled_at": "2026-10-24T00:00:00+00:00",
+  "note": "chance cut precisely; reference example"
+ }
+]

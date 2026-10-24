@@ -40,3 +40,11 @@ class MatchWorkspace:
     @property
     def clips(self) -> Path:
         return self.root / "clips.json"
+
+    @property
+    def broadcast(self) -> Path:
+        return self.root / "broadcast.json"
+
+    @property
+    def replay_events(self) -> Path:
+        return self.root / "replay_events.json"

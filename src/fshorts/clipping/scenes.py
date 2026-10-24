@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 from abc import ABC, abstractmethod
+from dataclasses import replace
 from pathlib import Path
 
 from fshorts.clipping.planner import ClipPlan
@@ -46,6 +47,8 @@ class SceneSnapper:
     def snap(self, video: Path, plan: ClipPlan) -> ClipPlan:
         cuts = self._detector.cuts(video, max(0.0, plan.start - self._snap), plan.end + self._snap)
         # Start may only move earlier (keep the build-up), end only later (keep the finish)
-        start = max((c for c in cuts if plan.start - self._snap <= c <= plan.start), default=plan.start)
-        end = min((c for c in cuts if plan.end <= c <= plan.end + self._snap), default=plan.end)
-        return ClipPlan(plan.kind, plan.anchor, start, end, plan.score, plan.label)
+        # and neither may cross the plan's floor/ceiling (a replay or a bench shot next to it)
+        low, high = max(plan.start - self._snap, plan.floor), min(plan.end + self._snap, plan.ceiling)
+        start = max((c for c in cuts if low <= c <= plan.start), default=plan.start)
+        end = min((c for c in cuts if plan.end <= c <= high), default=plan.end)
+        return replace(plan, start=start, end=end)

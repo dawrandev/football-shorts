@@ -130,6 +130,34 @@ Har bir milestone tugagach to'xtaymiz, natijani ko'rsataman va keyingisi uchun r
   - **Kamera almashishi:** chegaralar FFmpeg `scdet` topgan joylarga suriladi. Boshlanish faqat oldinga, tugash faqat keyinga suriladi.
   - **Review:** klip pleyerda ochiladi, y/n va sabab kiritiladi. Natija `data/labels/human/<match>.json` ga yoziladi, keyingi modelning training ma'lumoti shu bo'ladi.
 
+## 3c. M3.5 — klip sifati (2026-10-24)
+
+Siz ko'rib chiqqan birinchi kliplar bo'yicha baholaringiz `data/labels/human/` ga yozildi (24 ta klip).
+Asosiy muammo: "xavfli vaziyat" kliplarining ~70% i bo'sh edi. Sharhlovchi statistika va eski gollar haqida gapirgan joylar ham "gol" so'zi uchun tanlanib qolgan. Research: `docs/research/Klip sifati va xavfli vaziyatlar.md`.
+
+**Yangi usul — takror (replay) asosida:**
+- **Hisob paneli shabloni.** OCR o'qigan kadrlardan har bir match uchun panel shabloni o'rganiladi va har kadrda panel bor-yo'qligi solishtiriladi. Bu OCR'dan ishonchliroq: match oxirida OCR o'qimagan joylarda ham panelni topadi.
+- **Kadr turi.** SigLIP2 zero-shot har kadrni ajratadi: keng kadr, yaqin plan, tribuna/skameyka, logotip, darvoza oldi.
+- **Takror = panel yo'q, 3–60 s.** Rejissyor faqat muhim lahzani takrorlaydi. Takrordan oldingi oxirgi jonli keng kadr zarba vaqti hisoblanadi.
+- **Eski takrorlarni ajratish.** Avval efirga chiqqan kadrlar qayta ko'rsatilsa, ular piksel bo'yicha bir xil bo'ladi. 64×36 thumbnail solishtirish shuni topadi.
+- **Takror turini aniqlash.** Lokal Qwen3-8B (Apache-2.0) takror atrofidagi sharhni o'qiydi va nima bo'lganini aytadi: seyv, darvozadan tashqari zarba, blok, ustun, skill, fol, ofsayd va hokazo. O'yinchi nomini ham beradi.
+
+**Kategoriyalar:** `goal`, `goal_replay`, `chance`, `chance_replay`, `skill`, `skill_replay`.
+
+**Chegara qoidalari:**
+- Klip takror qoldig'i, skameyka yoki tribuna kadri bilan boshlanmaydi.
+- Xavfli vaziyat klipi zarbadan 4 s keyin tugaydi, takror boshlanishidan oldin.
+- Kamera almashishiga surish takror chegarasidan o'tmaydi.
+- Gol oldidagi penalti va gol takrorlari golga tegishli bo'ladi.
+
+**Keyingi qadamlar (rejada):**
+1. **Kadr turi modelini o'qitish.** Zero-shot o'rniga SigLIP2 embedding ustida linear probe, o'z belgilangan kadrlarimiz bilan.
+2. **Takrorsiz lahzalar.** Masalan Vini skill'i: sharhni LLM bilan sirpanuvchi oynada o'qish.
+3. **Nomlash.** Ikki jamoa tarkibini Whisper'ga prompt qilish, ismlarni roster bilan fuzzy-match qilish, sarlavha shablonlari ("Vini highlight BRA vs KOR").
+4. **Vizual spotting.** V-JEPA 2 / SigLIP2 xususiyatlari ustida temporal head, labellar ko'paygach. LightGBM ranker.
+5. **Namuna Shorts tahlili.** Siz yuborgan 10 ta Shorts'ning uzunligi, kesish uslubi, yozuvlari va animatsiyalari M5 branding uchun namuna bo'ladi.
+6. **Eslatma:** gol kliplari uzunligi bo'yicha funksiyani siz tushuntirasiz.
+
 ## 4. Xatarlar
 
 - **Hisob paneli har telekanalda turlicha.** ROI preset'lar bilan hal qilinadi. Yangi telekanal = yangi preset.

@@ -15,6 +15,9 @@ REASONS = {
     "b": "boring",
     "x": "bad_cut",
     "r": "replay_only",
+    "m": "missed_action",   # the right moment, but the window misses the key action
+    "j": "junk_frames",     # an unrelated shot or replay tail at an edge
+    "k": "skill",           # player skill highlight rather than a chance
 }
 
 
@@ -27,6 +30,7 @@ class ClipLabel:
     accepted: bool
     reason: str
     labelled_at: str
+    note: str = ""
 
 
 class LabelStore:

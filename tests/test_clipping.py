@@ -90,6 +90,14 @@ def test_snapper_widens_to_nearby_cuts_only():
     assert (snapped.start, snapped.end) == (85.5, 108.0)
 
 
+def test_snapper_respects_floor_and_ceiling():
+    plan = ClipPlan("chance", 100.0, 88.0, 106.0, 1.0, "x", floor=87.0, ceiling=107.0)
+
+    snapped = SceneSnapper(FakeCuts([85.5, 108.0]), snap_seconds=4).snap(None, plan)
+
+    assert (snapped.start, snapped.end) == (88.0, 106.0)
+
+
 def test_snapper_without_cuts_keeps_plan():
     plan = ClipPlan("chance", 100.0, 88.0, 106.0, 1.0, "x")
 

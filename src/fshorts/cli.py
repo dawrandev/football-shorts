@@ -4,8 +4,18 @@ import argparse
 import json
 import sys
 import time
+from collections import Counter
+from dataclasses import replace
 from pathlib import Path
 
+from fshorts.broadcast import (
+    BroadcastAnalyzer,
+    BroadcastTimeline,
+    CachedBroadcastAnalyzer,
+    RecapDetector,
+    ScoreBugDetector,
+    SiglipViewClassifier,
+)
 from fshorts.clipping import ClipCutter, ClipPlanner, FfmpegSceneCutDetector, SceneSnapper
 from fshorts.config import AppConfig
 from fshorts.evaluation import GoalDetectionEvaluator, GoalRecallEvaluator, GroundTruth
@@ -17,7 +27,9 @@ from fshorts.events import (
     CommentaryKeywordSource,
     PhraseMatcher,
     WhisperTranscriber,
+    Word,
 )
+from fshorts.events.replay_events import QwenGenerator, ReplayEvent, ReplayEventClassifier
 from fshorts.ingest import AudioExtractor, FfprobeProber, FrameSampler, ProbeError, Region
 from fshorts.scoreboard import (
     CachedScoreBugReader,
@@ -109,6 +121,33 @@ def _cmd_goals(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_moments(args: argparse.Namespace) -> int:
+    config = AppConfig.load(Path(args.config))
+    video = Path(args.video)
+    workspace = MatchWorkspace(config.paths.outputs, video)
+    readings = [ScoreReading.from_dict(r) for r in _load_json(workspace.score_readings, "goals")]
+    words = [Word(**w) for w in _load_json(workspace.transcript, "candidates")]
+
+    started = time.perf_counter()
+    analyzer = CachedBroadcastAnalyzer(
+        BroadcastAnalyzer(FrameSampler(), SiglipViewClassifier(), ScoreBugDetector()), workspace.broadcast
+    )
+    timeline = analyzer.analyze(video, Region(*config.scoreboard.region), readings)
+    replays = timeline.replays()
+    detector = RecapDetector(FrameSampler())
+    recaps = detector.recaps(detector.thumbnails(video), replays)
+    events = ReplayEventClassifier(QwenGenerator()).classify(replays, words)
+    events = [replace(e, recap=r) for e, r in zip(events, recaps)]
+    workspace.replay_events.write_text(
+        json.dumps([e.to_dict() for e in events], ensure_ascii=False, indent=1), encoding="utf-8"
+    )
+    for event in events:
+        flag = " (recap)" if event.recap else ""
+        print(f"  {_format_time(event.replay.start)}  {event.kind:16} {event.player or '-'}{flag}  {event.summary}")
+    print(f"{len(replays)} replays classified ({time.perf_counter() - started:.0f}s)")
+    return 0
+
+
 def _load_json(path: Path, step: str):
     if not path.is_file():
         raise FileNotFoundError(f"{path} missing, run 'fshorts {step}' first")
@@ -124,9 +163,15 @@ def _cmd_cut(args: argparse.Namespace) -> int:
     readings = [ScoreReading.from_dict(r) for r in _load_json(workspace.score_readings, "goals")]
     candidates = [Candidate.from_dict(c) for c in _load_json(workspace.candidates, "candidates")]
     duration = FfprobeProber().probe(video).duration_seconds
+    timeline = events = None
+    if workspace.replay_events.is_file():
+        timeline = BroadcastTimeline.from_dict(_load_json(workspace.broadcast, "moments"))
+        events = [ReplayEvent.from_dict(e) for e in _load_json(workspace.replay_events, "moments")]
 
     started = time.perf_counter()
-    plans = ClipPlanner(config.clip).plan(goals, readings, candidates, duration)
+    plans = ClipPlanner(config.clip).plan(goals, readings, candidates, duration, timeline, events)
+    for old in workspace.clips_dir.glob("*.mp4"):
+        old.unlink()
     snapper = SceneSnapper(FfmpegSceneCutDetector(), config.clip.snap_seconds)
     cutter = ClipCutter(config.output.encoder, config.output.bitrate)
 
@@ -142,9 +187,9 @@ def _cmd_cut(args: argparse.Namespace) -> int:
         print(f"  {clip_id}  {_format_time(plan.start)}-{_format_time(plan.end)}  {plan.label}")
 
     workspace.clips.write_text(json.dumps(clips, ensure_ascii=False, indent=1), encoding="utf-8")
-    kinds = [c["kind"] for c in clips]
-    print(f"{kinds.count('goal')} goal + {kinds.count('chance')} chance clips -> {workspace.clips_dir} "
-          f"({time.perf_counter() - started:.0f}s)")
+    counts = Counter(c["kind"] for c in clips)
+    summary = ", ".join(f"{n} {kind}" for kind, n in sorted(counts.items()))
+    print(f"{summary} -> {workspace.clips_dir} ({time.perf_counter() - started:.0f}s)")
     return 0
 
 
@@ -203,6 +248,10 @@ def build_parser() -> argparse.ArgumentParser:
     goals = commands.add_parser("goals", help="confirm goals from the on-screen score bug")
     goals.add_argument("video")
     goals.set_defaults(handler=_cmd_goals)
+
+    moments = commands.add_parser("moments", help="find replays and ask a local LLM what each one shows")
+    moments.add_argument("video")
+    moments.set_defaults(handler=_cmd_moments)
 
     cut = commands.add_parser("cut", help="plan and cut 16:9 highlight clips")
     cut.add_argument("video")
