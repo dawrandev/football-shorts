@@ -155,7 +155,12 @@ Asosiy muammo: "xavfli vaziyat" kliplarining ~70% i bo'sh edi. Sharhlovchi stati
 2. **Takrorsiz lahzalar.** Masalan Vini skill'i: sharhni LLM bilan sirpanuvchi oynada o'qish.
 3. **Nomlash.** Ikki jamoa tarkibini Whisper'ga prompt qilish, ismlarni roster bilan fuzzy-match qilish, sarlavha shablonlari ("Vini highlight BRA vs KOR").
 4. **Vizual spotting.** V-JEPA 2 / SigLIP2 xususiyatlari ustida temporal head, labellar ko'paygach. LightGBM ranker.
-5. **Namuna Shorts tahlili.** Siz yuborgan 10 ta Shorts'ning uzunligi, kesish uslubi, yozuvlari va animatsiyalari M5 branding uchun namuna bo'ladi.
+5. **Namuna Shorts tahlili ✅** `docs/research/Namuna Shorts tahlili.md`. Asosiy xulosalar:
+   - Shorts 10–25 s bo'ladi. Gol: −8/+5 s va bitta reaksiya kadri, takrorsiz.
+   - 9:16 crop harakat ortidan yuradi (M4).
+   - Sharh ovozi yo'q: stadion shovqini va musiqa.
+   - Boshida hook matni, o'yinchi ustida nom teglari.
+   - Katta "GOAL" animatsiyasi ishlatilmaydi.
 6. **Eslatma:** gol kliplari uzunligi bo'yicha funksiyani siz tushuntirasiz.
 
 ## 4. Xatarlar

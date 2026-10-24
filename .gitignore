@@ -8,6 +8,7 @@ __pycache__/
 # Media and run outputs never go into git
 data/matches/*
 data/outputs/*
+data/references/*
 !data/matches/.gitkeep
 !data/outputs/.gitkeep
 *.mp4
