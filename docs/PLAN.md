@@ -163,7 +163,25 @@ Asosiy muammo: "xavfli vaziyat" kliplarining ~70% i bo'sh edi. Sharhlovchi stati
    - Katta "GOAL" animatsiyasi ishlatilmaydi.
 6. **Eslatma:** gol kliplari uzunligi bo'yicha funksiyani siz tushuntirasiz.
 
-## 4. Xatarlar
+## 3d. M4a — birinchi 9:16 reframe (2026-10-24)
+
+- **Buyruq:** `fshorts vertical <match> [--kinds goal,chance]`. Kesilgan kliplardan `vertical/` papkasiga 1080×1920 NVENC fayllar chiqadi.
+- **Detektor:** RF-DETR Medium (Apache-2.0, COCO) fp16 + batch 8, 11.7 ms/kadr, klip bo'ylab 10 fps.
+  - O'yinchilar juda yaxshi topiladi (keng kadrda 15–22 ta).
+  - To'p faqat ~40% kadrda topiladi. Shuning uchun o'z to'p modelimiz (M4c) hali kerak.
+- **Kadr markazi:**
+  1. To'p (75%) va unga yaqin o'yinchilar markazi (25%).
+  2. Yaqin plan bo'lsa, katta odam markazda.
+  3. Bo'shliqlar interpolatsiya bilan to'ldiriladi.
+  4. Har kamera kadri alohida Gauss bilan silliqlanadi (0.6 s), kesishda kadr to'g'ridan-to'g'ri sakraydi.
+- **Hisob paneli:** zoom 1.15 va tepadagi 10% chiziq crop'dan tashqarida, shuning uchun telekanal paneli kadrga kirmaydi.
+- **Zaxira:** kuzatish kam bo'lsa (`min_coverage`), xiralashtirilgan fonli layout ishlatiladi.
+- **Natija:** BRA–KOR'ning 19 ta gol va xavfli vaziyat klipi ~105 s'da tayyor bo'ldi (detection keshda).
+- **Keyingi qadamlar:**
+  - M4b/c: o'z kadrlarimizni belgilab, to'p uchun RF-DETR fine-tune yoki 3 kadrlik heatmap model.
+  - Moslashuvchan zoom.
+  - 10 ta klip bo'yicha sifat bahosi.
+
 
 - **Hisob paneli har telekanalda turlicha.** ROI preset'lar bilan hal qilinadi. Yangi telekanal = yangi preset.
 - **Keng kadrlarda to'p juda kichik.** Detektor kadrni bo'laklarga bo'lib qidiradi (`InferenceSlicer`). To'p baribir topilmasa, xiralashtirilgan fonli zaxira formatga o'tamiz.

@@ -41,6 +41,14 @@ from fshorts.scoreboard import (
     ScoreReading,
     ScoreTimeline,
 )
+from fshorts.reframe import (
+    BlurFitRenderer,
+    CachedDetections,
+    CropPathPlanner,
+    FrameDetections,
+    RfDetrDetector,
+    VerticalCropRenderer,
+)
 from fshorts.review import LabelStore, ReviewSession
 from fshorts.workspace import MatchWorkspace
 
@@ -193,6 +201,45 @@ def _cmd_cut(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_vertical(args: argparse.Namespace) -> int:
+    config = AppConfig.load(Path(args.config))
+    out = config.output
+    workspace = MatchWorkspace(config.paths.outputs, Path(args.video))
+    clips = _load_json(workspace.clips, "cut")
+    if args.kinds:
+        clips = [c for c in clips if c["kind"] in args.kinds.split(",")]
+
+    prober, sampler, cuts = FfprobeProber(), FrameSampler(), FfmpegSceneCutDetector()
+    detector = None
+    crop = VerticalCropRenderer(sampler, out.width, out.height, out.encoder, out.bitrate, out.zoom, out.top_margin)
+    blur = BlurFitRenderer(out.width, out.height, out.encoder, out.bitrate)
+    started = time.perf_counter()
+    for clip in clips:
+        source = workspace.clips_dir / clip["file"]
+        target = workspace.vertical_dir / clip["file"]
+        info = prober.probe(source)
+        cache = CachedDetections(workspace.detections_dir / f"{clip['id']}.json")
+        detections = cache.load()
+        if detections is None:
+            detector = detector or RfDetrDetector()
+            samples = list(sampler.sample(source, out.detect_fps, Region(0, 0, info.width, info.height)))
+            boxes = detector.detect([frame for _, frame in samples])
+            detections = [FrameDetections(t, players, balls) for (t, _), (players, balls) in zip(samples, boxes)]
+            cache.save(detections)
+        path = CropPathPlanner(info.width, info.height, out.smooth_seconds).plan(
+            detections, cuts.cuts(source, 0.0, info.duration_seconds)
+        )
+        if out.layout == "crop" and path.coverage >= out.min_coverage:
+            crop.render(source, path, (info.width, info.height), info.fps, target)
+            how = f"crop, followed {path.coverage:.0%}"
+        else:
+            blur.render(source, target)
+            how = f"blur, followed {path.coverage:.0%}"
+        print(f"  {clip['id']}  {how}")
+    print(f"{len(clips)} vertical clips -> {workspace.vertical_dir} ({time.perf_counter() - started:.0f}s)")
+    return 0
+
+
 def _cmd_review(args: argparse.Namespace) -> int:
     config = AppConfig.load(Path(args.config))
     video = Path(args.video)
@@ -256,6 +303,11 @@ def build_parser() -> argparse.ArgumentParser:
     cut = commands.add_parser("cut", help="plan and cut 16:9 highlight clips")
     cut.add_argument("video")
     cut.set_defaults(handler=_cmd_cut)
+
+    vertical = commands.add_parser("vertical", help="reframe cut clips to 9:16, following the action")
+    vertical.add_argument("video")
+    vertical.add_argument("--kinds", help="comma separated clip kinds, e.g. goal,chance")
+    vertical.set_defaults(handler=_cmd_vertical)
 
     review = commands.add_parser("review", help="accept or reject cut clips (training labels)")
     review.add_argument("video")

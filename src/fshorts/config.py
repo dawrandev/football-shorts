@@ -25,6 +25,11 @@ class OutputConfig:
     layout: str
     encoder: str
     bitrate: str
+    zoom: float = 1.0               # 1.0 = full frame height; larger crops tighter around the action
+    top_margin: float = 0.0         # share of frame height at the top kept out of the crop (score bug)
+    detect_fps: float = 10.0        # detector rate along a clip; the crop path is interpolated between
+    smooth_seconds: float = 0.6
+    min_coverage: float = 0.5       # below this share of followed samples a clip falls back to blur
 
 
 @dataclass(frozen=True)

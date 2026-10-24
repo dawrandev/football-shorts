@@ -16,6 +16,11 @@ output:
   layout: crop        # crop = follow the ball, blur = 16:9 over blurred background
   encoder: h264_nvenc
   bitrate: 12M
+  zoom: 1.15            # 1.0 = full frame height; larger crops tighter around the action
+  top_margin: 0.1       # share of frame height at the top kept out of the crop: the score bug strip
+  detect_fps: 10        # detector rate along a clip; the crop path is interpolated between
+  smooth_seconds: 0.6   # camera smoothing per shot
+  min_coverage: 0.5     # share of samples where the ball/players were found, else blur layout
 
 # Candidate moment detection (M1)
 events:

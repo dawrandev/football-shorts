@@ -48,3 +48,13 @@ class MatchWorkspace:
     @property
     def replay_events(self) -> Path:
         return self.root / "replay_events.json"
+
+    @property
+    def vertical_dir(self) -> Path:
+        path = self.root / "vertical"
+        path.mkdir(exist_ok=True)
+        return path
+
+    @property
+    def detections_dir(self) -> Path:
+        return self.root / "detections"
