@@ -30,6 +30,12 @@ class OutputConfig:
     detect_fps: float = 10.0        # detector rate along a clip; the crop path is interpolated between
     smooth_seconds: float = 0.6
     min_coverage: float = 0.5       # below this share of followed samples a clip falls back to blur
+    ball_weights: Path | None = None  # our fine-tuned ball detector; None = pretrained COCO "sports ball"
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> OutputConfig:
+        weights = raw.get("ball_weights")
+        return cls(**{**raw, "ball_weights": Path(weights) if weights else None})
 
 
 @dataclass(frozen=True)
@@ -101,7 +107,7 @@ class AppConfig:
         raw = yaml.safe_load(path.read_text(encoding="utf-8"))
         config = cls(
             clip=ClipConfig(**raw["clip"]),
-            output=OutputConfig(**raw["output"]),
+            output=OutputConfig.from_dict(raw["output"]),
             events=EventsConfig.from_dict(raw["events"]),
             scoreboard=ScoreboardConfig.from_dict(raw["scoreboard"]),
             paths=PathsConfig(**{k: Path(v) for k, v in raw["paths"].items()}),

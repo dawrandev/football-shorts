@@ -21,6 +21,7 @@ output:
   detect_fps: 10        # detector rate along a clip; the crop path is interpolated between
   smooth_seconds: 0.6   # camera smoothing per shot
   min_coverage: 0.5     # share of samples where the ball/players were found, else blur layout
+  ball_weights: models/ball/checkpoint_best_total.pth   # our fine-tuned ball detector (fshorts trainball)
 
 # Candidate moment detection (M1)
 events:

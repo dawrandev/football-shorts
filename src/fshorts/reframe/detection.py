@@ -45,17 +45,20 @@ class RfDetrDetector(ObjectDetector):
     """
 
     def __init__(self, threshold: float = 0.3, ball_threshold: float = 0.25, tiles: tuple[int, int] = (3, 2),
-                 overlap: int = 64) -> None:
+                 overlap: int = 64, ball_weights: Path | None = None) -> None:
         from rfdetr import RFDETRMedium
 
         self._model = RFDETRMedium()
+        # Our own single-class ball model, fine-tuned on pseudo-labelled tiles (fshorts trainball)
+        self._ball_model = RFDETRMedium(pretrain_weights=str(ball_weights), resolution=640) if ball_weights else None
+        self._ball_class = 0 if ball_weights else SPORTS_BALL
         self._threshold = threshold
         self._ball_threshold = ball_threshold
         self._tiles = tiles
         self._overlap = overlap
 
     def detect(self, frames: list[np.ndarray]) -> list[tuple[np.ndarray, np.ndarray]]:
-        return [(self._players(frame), self._balls(frame)) for frame in frames]
+        return [(self._players(frame), self.balls(frame)) for frame in frames]
 
     def _rows(self, detections, class_id: int) -> np.ndarray:
         rows = np.column_stack([detections.xyxy, detections.confidence]).astype(np.float32)
@@ -64,7 +67,7 @@ class RfDetrDetector(ObjectDetector):
     def _players(self, frame: np.ndarray) -> np.ndarray:
         return self._rows(self._model.predict(frame, threshold=self._threshold), PERSON)
 
-    def _balls(self, frame: np.ndarray) -> np.ndarray:
+    def balls(self, frame: np.ndarray) -> np.ndarray:
         height, width = frame.shape[:2]
         cols, rows = self._tiles
         tiles, offsets = [], []
@@ -76,8 +79,9 @@ class RfDetrDetector(ObjectDetector):
                 tiles.append(frame[y0:y1, x0:x1])
                 offsets.append((x0, y0))
         found = []
-        for detections, (x0, y0) in zip(self._model.predict(tiles, threshold=self._ball_threshold), offsets):
-            balls = self._rows(detections, SPORTS_BALL)
+        model = self._ball_model or self._model
+        for detections, (x0, y0) in zip(model.predict(tiles, threshold=self._ball_threshold), offsets):
+            balls = self._rows(detections, self._ball_class)
             balls[:, [0, 2]] += x0
             balls[:, [1, 3]] += y0
             found.append(balls)

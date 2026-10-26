@@ -81,3 +81,30 @@ def test_tracker_drops_lost_track_after_coasting():
     tracker.update(0.0, balls(ball(500, 0.9)))
     assert tracker.update(0.3, balls()) is None
     assert tracker.update(1.0, balls(ball(1500, 0.6))) == pytest.approx(1500)   # new track after loss
+
+
+def test_coco_writer_puts_ball_inside_positive_tile_and_none_in_negative(tmp_path):
+    import json
+
+    from fshorts.reframe.balldata import TILE, BallLabel, CocoTileWriter
+
+    frame = np.zeros((1080, 1920, 3), np.uint8)
+    writer = CocoTileWriter(tmp_path)
+    writer.add("train", "m_1.0", frame, BallLabel(1.0, (1500.0, 300.0, 1512.0, 312.0), 0.4))
+    assert writer.close() == {"train": 2}
+
+    data = json.loads((tmp_path / "train" / "_annotations.coco.json").read_text())
+    [box] = [a["bbox"] for a in data["annotations"]]
+    assert 0 <= box[0] and box[0] + box[2] <= TILE and 0 <= box[1] and box[1] + box[3] <= TILE
+    assert [len([a for a in data["annotations"] if a["image_id"] == i["id"]]) for i in data["images"]] == [1, 0]
+
+
+def test_labeler_takes_only_live_wide_windows():
+    from fshorts.broadcast import BroadcastTimeline
+    from fshorts.reframe.balldata import BallPseudoLabeler
+
+    bug = tuple([True] * 60 + [False] * 60)
+    timeline = BroadcastTimeline(1.0, bug, tuple(["wide"] * 120))
+    labeler = BallPseudoLabeler(sampler=None, detector=None, window_seconds=6, every_seconds=30)
+
+    assert labeler.windows(timeline, 120) == [0.0, 30.0]

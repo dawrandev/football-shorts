@@ -41,6 +41,7 @@ from fshorts.scoreboard import (
     ScoreReading,
     ScoreTimeline,
 )
+from fshorts.reframe.balldata import BallPseudoLabeler, CocoTileWriter
 from fshorts.reframe import (
     BlurFitRenderer,
     CachedDetections,
@@ -223,7 +224,7 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
         cache = CachedDetections(workspace.detections_dir / f"{clip['id']}.json")
         detections = cache.load()
         if detections is None:
-            detector = detector or RfDetrDetector()
+            detector = detector or RfDetrDetector(ball_weights=out.ball_weights)
             samples = list(sampler.sample(video, out.detect_fps, Region(0, 0, *size), start=start,
                                           duration=end - start))
             boxes = detector.detect([frame for _, frame in samples])
@@ -241,6 +242,39 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
             how = f"blur, followed {path.coverage:.0%}"
         print(f"  {clip['id']}  {how}")
     print(f"{len(clips)} vertical clips -> {workspace.vertical_dir} ({time.perf_counter() - started:.0f}s)")
+    return 0
+
+
+def _cmd_balldata(args: argparse.Namespace) -> int:
+    """Pseudo-labelled ball tiles for training; the --test matches only go to the test split."""
+    config = AppConfig.load(Path(args.config))
+    writer = CocoTileWriter(Path(args.out))
+    labeler = BallPseudoLabeler(FrameSampler(), RfDetrDetector())
+    started = time.perf_counter()
+    for video, held_out in [(Path(v), False) for v in args.videos] + [(Path(v), True) for v in args.test or []]:
+        workspace = MatchWorkspace(config.paths.outputs, video)
+        timeline = BroadcastTimeline.from_dict(_load_json(workspace.broadcast, "moments"))
+        info = FfprobeProber().probe(video)
+        windows = labeler.windows(timeline, info.duration_seconds)
+        count = 0
+        for number, start in enumerate(windows):
+            split = "test" if held_out else ("valid" if number % 10 == 0 else "train")
+            for index, (frame, label) in enumerate(labeler.label(video, start, (info.width, info.height))):
+                if index % 5 == 0:   # 2 fps keeps neighbouring tiles from being near copies
+                    writer.add(split, f"{video.stem}_{label.time:.1f}", frame, label)
+                    count += 1
+        print(f"  {video.stem}: {len(windows)} live windows, {count} labelled frames")
+    print(f"{writer.close()} -> {args.out} ({time.perf_counter() - started:.0f}s)")
+    return 0
+
+
+def _cmd_trainball(args: argparse.Namespace) -> int:
+    from rfdetr import RFDETRMedium
+
+    RFDETRMedium(resolution=640).train(
+        dataset_dir=args.data, output_dir=args.out, epochs=args.epochs, batch_size=args.batch, lr=1e-4,
+    )
+    print(f"ball model -> {args.out}")
     return 0
 
 
@@ -312,6 +346,19 @@ def build_parser() -> argparse.ArgumentParser:
     vertical.add_argument("video")
     vertical.add_argument("--kinds", help="comma separated clip kinds, e.g. goal,chance")
     vertical.set_defaults(handler=_cmd_vertical)
+
+    balldata = commands.add_parser("balldata", help="build pseudo-labelled ball tiles to train our ball detector")
+    balldata.add_argument("videos", nargs="+")
+    balldata.add_argument("--test", nargs="*", help="matches kept out of training, for the test split only")
+    balldata.add_argument("--out", default="data/datasets/ball")
+    balldata.set_defaults(handler=_cmd_balldata)
+
+    trainball = commands.add_parser("trainball", help="fine-tune RF-DETR on the pseudo-labelled ball tiles")
+    trainball.add_argument("--data", default="data/datasets/ball")
+    trainball.add_argument("--out", default="models/ball")
+    trainball.add_argument("--epochs", type=int, default=20)
+    trainball.add_argument("--batch", type=int, default=16)
+    trainball.set_defaults(handler=_cmd_trainball)
 
     review = commands.add_parser("review", help="accept or reject cut clips (training labels)")
     review.add_argument("video")
