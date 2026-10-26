@@ -31,11 +31,14 @@ class OutputConfig:
     smooth_seconds: float = 0.6
     min_coverage: float = 0.5       # below this share of followed samples a clip falls back to blur
     ball_weights: Path | None = None  # our fine-tuned ball detector; None = pretrained COCO "sports ball"
+    window_aspect: float = 0.8      # width/height of the followed window in the "wide" layout (4:5)
+    upscaler: str = "lanczos"       # lanczos | realesrgan
+    sr_weights: Path | None = None
 
     @classmethod
     def from_dict(cls, raw: dict) -> OutputConfig:
-        weights = raw.get("ball_weights")
-        return cls(**{**raw, "ball_weights": Path(weights) if weights else None})
+        paths = {key: Path(raw[key]) if raw.get(key) else None for key in ("ball_weights", "sr_weights")}
+        return cls(**{**raw, **paths})
 
 
 @dataclass(frozen=True)
@@ -100,7 +103,7 @@ class AppConfig:
     scoreboard: ScoreboardConfig
     paths: PathsConfig
 
-    LAYOUTS = ("crop", "blur")
+    LAYOUTS = ("crop", "wide", "blur")
 
     @classmethod
     def load(cls, path: Path) -> AppConfig:

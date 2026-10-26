@@ -45,6 +45,8 @@ from fshorts.reframe.balldata import BallPseudoLabeler, CocoTileWriter
 from fshorts.reframe import (
     BlurFitRenderer,
     CachedDetections,
+    LanczosUpscaler,
+    RealEsrganUpscaler,
     CropPathPlanner,
     FrameDetections,
     RfDetrDetector,
@@ -212,7 +214,9 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
 
     prober, sampler, cuts = FfprobeProber(), FrameSampler(), FfmpegSceneCutDetector()
     detector = None
-    crop = VerticalCropRenderer(sampler, out.width, out.height, out.encoder, out.bitrate, out.zoom, out.top_margin)
+    upscaler = RealEsrganUpscaler(out.sr_weights) if out.upscaler == "realesrgan" else LanczosUpscaler()
+    crop = VerticalCropRenderer(sampler, upscaler, out.width, out.height, out.encoder, out.bitrate, out.layout,
+                                out.window_aspect, out.zoom, out.top_margin)
     blur = BlurFitRenderer(out.width, out.height, out.encoder, out.bitrate)
     started = time.perf_counter()
     video = Path(args.video)
@@ -232,10 +236,10 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
             cache.save(detections)
         shot_cuts = [c - start for c in cuts.cuts(video, start, end)]
         path = CropPathPlanner(*size, out.smooth_seconds).plan(detections, shot_cuts)
-        if out.layout == "crop" and path.coverage >= out.min_coverage:
+        if out.layout != "blur" and path.coverage >= out.min_coverage:
             crop.render(video, start, end, path, size, match.fps, target)
             inside = path.ball_inside(crop.crop_width(match.height))
-            how = (f"crop, ball seen {path.ball_coverage:.0%}"
+            how = (f"{out.layout}, ball seen {path.ball_coverage:.0%}"
                    + (f", in frame {inside:.0%}" if inside is not None else ""))
         else:
             blur.render(video, start, end, target)

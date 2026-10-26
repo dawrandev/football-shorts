@@ -9,6 +9,7 @@ import numpy as np
 
 from fshorts.ingest import FrameSampler, Region
 from fshorts.reframe.path import CropPath
+from fshorts.reframe.upscale import Upscaler
 
 
 # High quality NVENC settings: slowest preset, constant quality with a generous ceiling and adaptive
@@ -17,11 +18,6 @@ NVENC_QUALITY = [
     "-preset", "p7", "-tune", "hq", "-rc", "vbr", "-cq", "18", "-maxrate", "30M", "-bufsize", "60M",
     "-spatial-aq", "1", "-temporal-aq", "1", "-bf", "3", "-profile:v", "high",
 ]
-# Upscaled crops look soft; a light unsharp mask restores edges without halos
-SHARPEN_AMOUNT = 0.5
-SHARPEN_SIGMA = 1.2
-
-
 def encoder_options(encoder: str, bitrate: str) -> list[str]:
     if encoder.endswith("_nvenc"):
         return ["-c:v", encoder, "-b:v", bitrate, *NVENC_QUALITY]
@@ -36,34 +32,46 @@ def _ffmpeg(binary: str) -> str:
 
 
 class VerticalCropRenderer:
-    """Cuts a moving 9:16 window straight out of the match along a crop path: one decode, one encode.
+    """Cuts a moving window straight out of the match along a crop path: one decode, one encode.
 
-    Rendering from the original file (not from an already encoded clip) avoids a second generation
-    of compression; Lanczos scaling plus a light unsharp mask keeps the ~2x upscale crisp.
+    Layouts on the 9:16 canvas:
+      crop - the window is 9:16 itself and fills the screen (tightest, players look biggest);
+      wide - a wider window (e.g. 4:5) in the middle over a blurred copy of itself, so the players
+             around the ball stay in view and the upscale is smaller (sharper).
+    Rendering from the original file, not an already encoded clip, avoids a second generation of compression.
     """
 
-    def __init__(self, sampler: FrameSampler, width: int, height: int, encoder: str, bitrate: str,
-                 zoom: float = 1.0, top_margin: float = 0.0, binary: str = "ffmpeg") -> None:
+    def __init__(self, sampler: FrameSampler, upscaler: Upscaler, width: int, height: int, encoder: str,
+                 bitrate: str, layout: str = "crop", window_aspect: float = 0.8, zoom: float = 1.0,
+                 top_margin: float = 0.0, binary: str = "ffmpeg") -> None:
         self._sampler = sampler
+        self._upscaler = upscaler
         self._size = (width, height)
         self._encoder = encoder
         self._bitrate = bitrate
+        self._layout = layout
+        self._aspect = window_aspect if layout == "wide" else width / height
         self._zoom = zoom
         self._top_margin = top_margin
         self._binary = _ffmpeg(binary)
 
+    def window(self, source: tuple[int, int]) -> tuple[int, int, int]:
+        """(width, height, top) of the window on the source frame."""
+        src_w, src_h = source
+        # Keep the broadcaster's score bug strip out of the window; our own overlay replaces it
+        top = int(self._top_margin * src_h)
+        height = min(int(src_h / self._zoom), src_h - top)
+        width = min(src_w, int(round(height * self._aspect)))
+        return width, height, top
+
     def crop_width(self, source_height: int) -> int:
-        out_w, out_h = self._size
-        return int(round(int(source_height / self._zoom) * out_w / out_h))
+        return self.window((10 ** 6, source_height))[0]
 
     def render(self, video: Path, start: float, end: float, path: CropPath, source: tuple[int, int], fps: float,
                target: Path) -> Path:
         src_w, src_h = source
         out_w, out_h = self._size
-        crop_h = int(src_h / self._zoom)
-        crop_w = int(round(crop_h * out_w / out_h))
-        # Keep the broadcaster's score bug strip out of the window; our own overlay replaces it
-        top = min(src_h - crop_h, max((src_h - crop_h) // 2, int(self._top_margin * src_h)))
+        win_w, win_h, top = self.window(source)
         encoder = subprocess.Popen([
             self._binary, "-v", "error", "-y",
             "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{out_w}x{out_h}", "-r", f"{fps}", "-i", "-",
@@ -74,9 +82,8 @@ class VerticalCropRenderer:
         try:
             frames = self._sampler.sample(video, fps, Region(0, 0, src_w, src_h), start=start, duration=end - start)
             for time, frame in frames:
-                left = int(np.clip(path.center(time) - crop_w / 2, 0, src_w - crop_w))
-                window = frame[top:top + crop_h, left:left + crop_w]
-                encoder.stdin.write(self._upscale(window).tobytes())
+                left = int(np.clip(path.center(time) - win_w / 2, 0, src_w - win_w))
+                encoder.stdin.write(self._compose(frame[top:top + win_h, left:left + win_w]).tobytes())
         finally:
             encoder.stdin.close()
             encoder.wait()
@@ -84,11 +91,27 @@ class VerticalCropRenderer:
             raise RuntimeError(f"ffmpeg failed on {target.name}")
         return target
 
+    def _compose(self, window: np.ndarray) -> np.ndarray:
+        out_w, out_h = self._size
+        if self._layout != "wide":
+            return self._upscaler.upscale(window, self._size)
+        fg_h = int(round(out_w / self._aspect))
+        canvas = blurred_cover(window, self._size)
+        y = (out_h - fg_h) // 2
+        canvas[y:y + fg_h] = self._upscaler.upscale(window, (out_w, fg_h))
+        return canvas
 
-    def _upscale(self, window: np.ndarray) -> np.ndarray:
-        scaled = cv2.resize(window, self._size, interpolation=cv2.INTER_LANCZOS4)
-        blurred = cv2.GaussianBlur(scaled, (0, 0), SHARPEN_SIGMA)
-        return cv2.addWeighted(scaled, 1 + SHARPEN_AMOUNT, blurred, -SHARPEN_AMOUNT, 0)
+
+def blurred_cover(image: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    """The image scaled to cover `size`, centre-cropped, blurred and darkened (blurred small, so it is cheap)."""
+    out_w, out_h = size
+    h, w = image.shape[:2]
+    scale = max(out_w / w, out_h / h)
+    small = cv2.resize(image, (max(1, int(w * scale / 8)), max(1, int(h * scale / 8))), interpolation=cv2.INTER_AREA)
+    small = cv2.GaussianBlur(small, (0, 0), 6)
+    big = cv2.resize(small, (int(w * scale) + 1, int(h * scale) + 1), interpolation=cv2.INTER_LINEAR)
+    x, y = (big.shape[1] - out_w) // 2, (big.shape[0] - out_h) // 2
+    return (big[y:y + out_h, x:x + out_w] * 0.6).astype(np.uint8)
 
 
 class BlurFitRenderer:

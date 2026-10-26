@@ -13,15 +13,19 @@ clip:
 output:
   width: 1080
   height: 1920
-  layout: crop        # crop = follow the ball, blur = 16:9 over blurred background
+  layout: wide        # crop = 9:16 window following the ball; wide = 4:5 window following it over
+                      # a blurred fill (more players in view); blur = whole 16:9 frame over blur
   encoder: h264_nvenc
   bitrate: 12M
-  zoom: 1.15            # 1.0 = full frame height; larger crops tighter around the action
+  zoom: 1.0             # 1.0 = full frame height; larger crops tighter around the action
   top_margin: 0.1       # share of frame height at the top kept out of the crop: the score bug strip
   detect_fps: 10        # detector rate along a clip; the crop path is interpolated between
   smooth_seconds: 0.6   # camera smoothing per shot
   min_coverage: 0.5     # share of samples where the ball/players were found, else blur layout
   ball_weights: models/ball/checkpoint_best_total.pth   # our fine-tuned ball detector (fshorts trainball)
+  window_aspect: 0.8    # width/height of the followed window in the wide layout (4:5)
+  upscaler: realesrgan  # lanczos | realesrgan (sharper, removes compression blocks)
+  sr_weights: models/realesr-general-x4v3.pth
 
 # Candidate moment detection (M1)
 events:

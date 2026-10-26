@@ -19,7 +19,7 @@ def test_repo_config_loads():
 def test_invalid_layout_rejected(tmp_path):
     text = (ROOT / "config.yaml").read_text(encoding="utf-8")
     bad = tmp_path / "config.yaml"
-    bad.write_text(text.replace("layout: crop", "layout: square"), encoding="utf-8")
+    bad.write_text(text.replace("layout: wide", "layout: square"), encoding="utf-8")
 
     with pytest.raises(ValueError, match="layout"):
         AppConfig.load(bad)

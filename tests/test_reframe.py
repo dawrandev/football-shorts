@@ -108,3 +108,29 @@ def test_labeler_takes_only_live_wide_windows():
     labeler = BallPseudoLabeler(sampler=None, detector=None, window_seconds=6, every_seconds=30)
 
     assert labeler.windows(timeline, 120) == [0.0, 30.0]
+
+
+def test_wide_layout_window_is_wider_and_skips_score_bug():
+    from fshorts.reframe import LanczosUpscaler, VerticalCropRenderer
+
+    def renderer(layout):
+        return VerticalCropRenderer(None, LanczosUpscaler(), 1080, 1920, "libx264", "8M", layout=layout,
+                                    window_aspect=0.8, zoom=1.0, top_margin=0.1, binary="ffmpeg")
+
+    crop_w, crop_h, top = renderer("crop").window((W, H))
+    wide_w, wide_h, _ = renderer("wide").window((W, H))
+    assert top == 108 and crop_h == wide_h == 972
+    assert crop_w == round(972 * 9 / 16) and wide_w == round(972 * 0.8)
+
+
+def test_wide_compose_fills_canvas_with_window_in_middle():
+    from fshorts.reframe import LanczosUpscaler, VerticalCropRenderer
+
+    renderer = VerticalCropRenderer(None, LanczosUpscaler(), 1080, 1920, "libx264", "8M", layout="wide",
+                                    window_aspect=0.8, binary="ffmpeg")
+    window = np.full((972, 778, 3), 200, np.uint8)
+
+    canvas = renderer._compose(window)
+
+    assert canvas.shape == (1920, 1080, 3)
+    assert canvas[960, 540, 0] >= 199 and canvas[100, 540, 0] < 200   # sharp middle, darkened blur above
