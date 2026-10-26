@@ -28,15 +28,20 @@ class FrameSampler:
         self._hwaccel = hwaccel
 
     def sample(
-        self, video: Path, fps: float, region: Region, size: tuple[int, int] | None = None, gray: bool = False
+        self, video: Path, fps: float, region: Region, size: tuple[int, int] | None = None, gray: bool = False,
+        start: float = 0.0, duration: float | None = None,
     ) -> Iterator[tuple[float, np.ndarray]]:
-        """Yields (time, frame); `size` rescales the crop to (width, height), `gray` returns one channel."""
+        """Yields (time from `start`, frame); `size` rescales the crop to (width, height), `gray` gives one channel."""
         width, height = size or (region.width, region.height)
         channels = 1 if gray else 3
         scale = f",scale={width}:{height}" if size else ""
         command = [self._binary, "-v", "error"]
         if self._hwaccel:
             command += ["-hwaccel", self._hwaccel]
+        if start:
+            command += ["-ss", f"{start:.3f}"]
+        if duration is not None:
+            command += ["-t", f"{duration:.3f}"]
         command += [
             "-i", str(video),
             "-vf", f"fps={fps},crop={region.width}:{region.height}:{region.x}:{region.y}{scale}",

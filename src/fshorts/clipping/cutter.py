@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 
 from fshorts.clipping.planner import ClipPlan
+from fshorts.reframe.render import encoder_options
 
 
 class ClipCutter:
@@ -22,7 +23,7 @@ class ClipCutter:
         command = [
             self._binary, "-v", "error", "-y",
             "-ss", f"{plan.start:.3f}", "-t", f"{plan.duration:.3f}", "-i", str(video),
-            "-c:v", self._encoder, "-b:v", self._bitrate, "-pix_fmt", "yuv420p",
+            *encoder_options(self._encoder, self._bitrate), "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", str(target),
         ]
         subprocess.run(command, check=True)

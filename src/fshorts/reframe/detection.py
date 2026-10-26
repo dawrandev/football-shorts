@@ -38,26 +38,60 @@ class ObjectDetector(ABC):
 
 
 class RfDetrDetector(ObjectDetector):
-    """Pretrained RF-DETR Medium (Apache-2.0) in fp16; players are reliable, the small ball is not yet."""
+    """Pretrained RF-DETR Medium (Apache-2.0): players on the whole frame, the ball on overlapping tiles.
 
-    def __init__(self, threshold: float = 0.3, batch_size: int = 8) -> None:
-        import torch
+    The model sees a 576 px image; a whole 1080p frame shrinks the 10-15 px ball to a few pixels,
+    so the ball is searched in a 3x2 grid of tiles at nearly native size (75% -> 92% of frames).
+    """
+
+    def __init__(self, threshold: float = 0.3, ball_threshold: float = 0.25, tiles: tuple[int, int] = (3, 2),
+                 overlap: int = 64) -> None:
         from rfdetr import RFDETRMedium
 
         self._model = RFDETRMedium()
-        self._model.inference(batch_size=batch_size, dtype=torch.float16)
         self._threshold = threshold
-        self._batch = batch_size
+        self._ball_threshold = ball_threshold
+        self._tiles = tiles
+        self._overlap = overlap
 
     def detect(self, frames: list[np.ndarray]) -> list[tuple[np.ndarray, np.ndarray]]:
-        results = []
-        for i in range(0, len(frames), self._batch):
-            chunk = frames[i:i + self._batch]
-            padded = chunk + [chunk[-1]] * (self._batch - len(chunk))   # the optimised model wants full batches
-            for d in self._model.predict(padded, threshold=self._threshold)[:len(chunk)]:
-                rows = np.column_stack([d.xyxy, d.confidence]).astype(np.float32)
-                results.append((rows[d.class_id == PERSON], rows[d.class_id == SPORTS_BALL]))
-        return results
+        return [(self._players(frame), self._balls(frame)) for frame in frames]
+
+    def _rows(self, detections, class_id: int) -> np.ndarray:
+        rows = np.column_stack([detections.xyxy, detections.confidence]).astype(np.float32)
+        return rows[detections.class_id == class_id]
+
+    def _players(self, frame: np.ndarray) -> np.ndarray:
+        return self._rows(self._model.predict(frame, threshold=self._threshold), PERSON)
+
+    def _balls(self, frame: np.ndarray) -> np.ndarray:
+        height, width = frame.shape[:2]
+        cols, rows = self._tiles
+        tiles, offsets = [], []
+        for r in range(rows):
+            for c in range(cols):
+                x0, y0 = max(0, c * width // cols - self._overlap), max(0, r * height // rows - self._overlap)
+                x1 = min(width, (c + 1) * width // cols + self._overlap)
+                y1 = min(height, (r + 1) * height // rows + self._overlap)
+                tiles.append(frame[y0:y1, x0:x1])
+                offsets.append((x0, y0))
+        found = []
+        for detections, (x0, y0) in zip(self._model.predict(tiles, threshold=self._ball_threshold), offsets):
+            balls = self._rows(detections, SPORTS_BALL)
+            balls[:, [0, 2]] += x0
+            balls[:, [1, 3]] += y0
+            found.append(balls)
+        return merge_duplicates(np.concatenate(found))
+
+
+def merge_duplicates(boxes: np.ndarray, distance: float = 15.0) -> np.ndarray:
+    """One box per object where overlapping tiles both saw it: keep the most confident."""
+    kept: list[np.ndarray] = []
+    for box in boxes[np.argsort(-boxes[:, 4])]:
+        center = (box[:2] + box[2:4]) / 2
+        if all(np.linalg.norm(center - (k[:2] + k[2:4]) / 2) > distance for k in kept):
+            kept.append(box)
+    return np.array(kept, dtype=np.float32).reshape(-1, 5)
 
 
 class CachedDetections:

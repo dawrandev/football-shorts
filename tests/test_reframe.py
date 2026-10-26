@@ -33,7 +33,9 @@ def test_gaps_are_interpolated_and_unreliable_balls_ignored():
 
     path = CropPathPlanner(W, H, smooth_seconds=0).plan(detections, [])
 
-    assert path.center(0.5) == pytest.approx(600)
+    # without the ball each known sample leans halfway to the frame centre (960)
+    assert path.center(0.0) == pytest.approx(680)
+    assert path.center(0.5) == pytest.approx((680 + 880) / 2)
     assert path.coverage == pytest.approx(2 / 3)
 
 
@@ -52,5 +54,30 @@ def test_camera_cut_jumps_without_blending():
     path = CropPathPlanner(W, H, smooth_seconds=0.6).plan(detections, [1.95])
 
     assert len(path.segments) == 2
-    assert path.center(1.9) == pytest.approx(400, abs=1)
-    assert path.center(1.96) == pytest.approx(1500, abs=1)
+    # no ball, so each shot sits halfway between its players and the frame centre
+    assert path.center(1.9) == pytest.approx(680, abs=1)
+    assert path.center(1.96) == pytest.approx(1230, abs=1)
+
+
+def balls(*rows):
+    return np.array(rows, np.float32).reshape(-1, 5)
+
+
+def test_tracker_starts_on_confident_ball_and_ignores_far_weak_ones():
+    from fshorts.reframe import BallTracker
+
+    tracker = BallTracker(W)
+    assert tracker.update(0.0, balls(ball(500, 0.3))) is None          # too weak to start a track
+    assert tracker.update(0.1, balls(ball(500, 0.8))) == pytest.approx(500)
+    # a glove far away scores higher than the real ball near the track
+    picked = tracker.update(0.2, balls(ball(1500, 0.6), ball(540, 0.3)))
+    assert picked == pytest.approx(540)
+
+
+def test_tracker_drops_lost_track_after_coasting():
+    from fshorts.reframe import BallTracker
+
+    tracker = BallTracker(W)
+    tracker.update(0.0, balls(ball(500, 0.9)))
+    assert tracker.update(0.3, balls()) is None
+    assert tracker.update(1.0, balls(ball(1500, 0.6))) == pytest.approx(1500)   # new track after loss

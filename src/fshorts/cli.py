@@ -214,26 +214,30 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
     crop = VerticalCropRenderer(sampler, out.width, out.height, out.encoder, out.bitrate, out.zoom, out.top_margin)
     blur = BlurFitRenderer(out.width, out.height, out.encoder, out.bitrate)
     started = time.perf_counter()
+    video = Path(args.video)
+    match = prober.probe(video)
+    size = (match.width, match.height)
     for clip in clips:
-        source = workspace.clips_dir / clip["file"]
+        start, end = clip["start"], clip["end"]
         target = workspace.vertical_dir / clip["file"]
-        info = prober.probe(source)
         cache = CachedDetections(workspace.detections_dir / f"{clip['id']}.json")
         detections = cache.load()
         if detections is None:
             detector = detector or RfDetrDetector()
-            samples = list(sampler.sample(source, out.detect_fps, Region(0, 0, info.width, info.height)))
+            samples = list(sampler.sample(video, out.detect_fps, Region(0, 0, *size), start=start,
+                                          duration=end - start))
             boxes = detector.detect([frame for _, frame in samples])
             detections = [FrameDetections(t, players, balls) for (t, _), (players, balls) in zip(samples, boxes)]
             cache.save(detections)
-        path = CropPathPlanner(info.width, info.height, out.smooth_seconds).plan(
-            detections, cuts.cuts(source, 0.0, info.duration_seconds)
-        )
+        shot_cuts = [c - start for c in cuts.cuts(video, start, end)]
+        path = CropPathPlanner(*size, out.smooth_seconds).plan(detections, shot_cuts)
         if out.layout == "crop" and path.coverage >= out.min_coverage:
-            crop.render(source, path, (info.width, info.height), info.fps, target)
-            how = f"crop, followed {path.coverage:.0%}"
+            crop.render(video, start, end, path, size, match.fps, target)
+            inside = path.ball_inside(crop.crop_width(match.height))
+            how = (f"crop, ball seen {path.ball_coverage:.0%}"
+                   + (f", in frame {inside:.0%}" if inside is not None else ""))
         else:
-            blur.render(source, target)
+            blur.render(video, start, end, target)
             how = f"blur, followed {path.coverage:.0%}"
         print(f"  {clip['id']}  {how}")
     print(f"{len(clips)} vertical clips -> {workspace.vertical_dir} ({time.perf_counter() - started:.0f}s)")
