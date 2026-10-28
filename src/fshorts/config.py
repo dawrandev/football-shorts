@@ -96,12 +96,21 @@ class PathsConfig:
 
 
 @dataclass(frozen=True)
+class ShortTiming:
+    goal_pre: float = 12.0      # the median reference Short opens ~12.7 s before the goal ...
+    goal_post: float = 4.0      # ... and ends ~3 s after it, on one reaction shot
+    chance_pre: float = 9.0
+    chance_post: float = 2.0
+
+
+@dataclass(frozen=True)
 class AppConfig:
     clip: ClipConfig
     output: OutputConfig
     events: EventsConfig
     scoreboard: ScoreboardConfig
     paths: PathsConfig
+    shorts: ShortTiming = ShortTiming()
 
     LAYOUTS = ("crop", "wide", "blur")
 
@@ -114,6 +123,7 @@ class AppConfig:
             events=EventsConfig.from_dict(raw["events"]),
             scoreboard=ScoreboardConfig.from_dict(raw["scoreboard"]),
             paths=PathsConfig(**{k: Path(v) for k, v in raw["paths"].items()}),
+            shorts=ShortTiming(**raw.get("shorts", {})),
         )
         config._validate()
         return config

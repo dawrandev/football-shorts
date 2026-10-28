@@ -89,3 +89,25 @@ Bular avtomatlashtirsa bo'ladigan effektlar, lekin rasmiy uslubdan keyin.
 4. **Hook matni + sarlavha:** LLM'dan, hook birinchi yarmida ko'rinadi.
 5. **O'yinchi nomi teglari:** tracking + identifikatsiya.
 6. **Fan-edit effektlari:** slow-mo, grading.
+
+## 8. Aniq vaqt o'lchovi (2026-10-28)
+
+Har bir gol namunasi 2 fps kadrlarda ko'rib chiqildi. "Gol" = to'p to'rga kirgan lahza.
+
+| Namuna | Goldan oldin | Goldan keyin | Keyingi qism nima | Hook ko'rinadi |
+|---|---|---|---|---|
+| HX5sMqdfX3E | 6.7 s | 4.2 s | quvonish yaqin plani | 0–4.5 s |
+| 9C6KurxI_eM | 16.7 s | 4.8 s | quvonish | 0–2.5 s |
+| zprnx_wxA50 | 12.7 s | 0.4 s | — | 0–6 s |
+| ks07dnU6PU4 | 15.0 s | 3.5 s | Klopp reaksiyasi | 0–9 s |
+| I5XdtMxhwY4 | 15.5 s | ~0 s | — | 0–5.5 s |
+| 71LfBNHLeWg | ~6.5 s | 3.4 s | quvonish | 0–4.5 s |
+| DgR9ljTuWIw | ~6 s | ~2 s | — | — |
+
+Mediana: goldan oldin 12.7 s, keyin 3 s, jami ~16 s. Hook klipning birinchi ~45% qismida turadi.
+
+**Bizning qaror (`config.yaml` → `shorts`):**
+- Gol: aniq gol lahzasidan −12 s / +4 s, oxirida bitta reaksiya kadri.
+- Xavfli vaziyat va skill: −9 s / +2 s, takror boshlanguncha.
+
+**Aniq gol lahzasi.** Hisob paneli asl goldan 0–6 s kech yangilanadi, buni BRA–KOR'ning 5 golida kadrma-kadr tekshirdim. Stadion hayqirig'i to'p to'rga kirgandan ~1.5 s keyin eng baland nuqtaga chiqadi. Qoida: gol lahzasi = hisob o'zgarishidan −15…+3 s oraliqdagi ovoz cho'qqisi − 1.5 s. Masalan Richarlison goli: kadrda −6.0 s, qoida bo'yicha −6.2 s.

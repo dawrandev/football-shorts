@@ -17,6 +17,10 @@ from fshorts.broadcast import (
     SiglipViewClassifier,
 )
 from fshorts.clipping import ClipCutter, ClipPlanner, FfmpegSceneCutDetector, SceneSnapper
+from fshorts.branding.brief import ShortBriefs
+from fshorts.branding.captions import CaptionStore, CaptionWriter
+from fshorts.branding.overlay import ShortOverlay
+from fshorts.clipping.shorts import GoalMomentRefiner, ShortsPlanner
 from fshorts.config import AppConfig
 from fshorts.evaluation import GoalDetectionEvaluator, GoalRecallEvaluator, GroundTruth
 from fshorts.events import (
@@ -56,6 +60,8 @@ from fshorts.review import LabelStore, ReviewSession
 from fshorts.workspace import MatchWorkspace
 
 DEFAULT_CONFIG = Path("config.yaml")
+# Shorts edges may move this far onto a camera cut
+SHORT_SNAP_SECONDS = 2.0
 GROUND_TRUTH_DIR = Path("tests/ground_truth")
 
 
@@ -136,6 +142,9 @@ def _cmd_moments(args: argparse.Namespace) -> int:
     config = AppConfig.load(Path(args.config))
     video = Path(args.video)
     workspace = MatchWorkspace(config.paths.outputs, video)
+    if workspace.replay_events.is_file() and not getattr(args, "force", False):
+        print(f"replays already classified ({workspace.replay_events}); --force to redo")
+        return 0
     readings = [ScoreReading.from_dict(r) for r in _load_json(workspace.score_readings, "goals")]
     words = [Word(**w) for w in _load_json(workspace.transcript, "candidates")]
 
@@ -209,6 +218,7 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
     out = config.output
     workspace = MatchWorkspace(config.paths.outputs, Path(args.video))
     clips = _load_json(workspace.clips, "cut")
+    clips = _short_windows(config, workspace, clips) if args.profile == "short" else clips
     if args.kinds:
         clips = [c for c in clips if c["kind"] in args.kinds.split(",")]
 
@@ -218,14 +228,17 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
     crop = VerticalCropRenderer(sampler, upscaler, out.width, out.height, out.encoder, out.bitrate, out.layout,
                                 out.window_aspect, out.zoom, out.top_margin)
     blur = BlurFitRenderer(out.width, out.height, out.encoder, out.bitrate)
+    briefs = _briefs(workspace) if args.profile == "short" else None
+    if briefs is not None:
+        briefs.prepare(clips)
     started = time.perf_counter()
     video = Path(args.video)
     match = prober.probe(video)
     size = (match.width, match.height)
     for clip in clips:
         start, end = clip["start"], clip["end"]
-        target = workspace.vertical_dir / clip["file"]
-        cache = CachedDetections(workspace.detections_dir / f"{clip['id']}.json")
+        target = (workspace.shorts_dir if args.profile == "short" else workspace.vertical_dir) / clip["file"]
+        cache = CachedDetections(workspace.detections_dir / f"{clip['id']}_{args.profile}.json")
         detections = cache.load()
         if detections is None:
             detector = detector or RfDetrDetector(ball_weights=out.ball_weights)
@@ -237,7 +250,12 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
         shot_cuts = [c - start for c in cuts.cuts(video, start, end)]
         path = CropPathPlanner(*size, out.smooth_seconds).plan(detections, shot_cuts)
         if out.layout != "blur" and path.coverage >= out.min_coverage:
-            crop.render(video, start, end, path, size, match.fps, target)
+            overlay = None
+            if briefs is not None:
+                spec, caption = briefs.brief(clip)
+                overlay = ShortOverlay(spec, (out.width, out.height), *crop.window_band())
+                clip.update(title=caption.title, hook=caption.hook, player=caption.player)
+            crop.render(video, start, end, path, size, match.fps, target, overlay)
             inside = path.ball_inside(crop.crop_width(match.height))
             how = (f"{out.layout}, ball seen {path.ball_coverage:.0%}"
                    + (f", in frame {inside:.0%}" if inside is not None else ""))
@@ -245,8 +263,35 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
             blur.render(video, start, end, target)
             how = f"blur, followed {path.coverage:.0%}"
         print(f"  {clip['id']}  {how}")
-    print(f"{len(clips)} vertical clips -> {workspace.vertical_dir} ({time.perf_counter() - started:.0f}s)")
+    if args.profile == "short":
+        workspace.shorts.write_text(json.dumps(clips, ensure_ascii=False, indent=1), encoding="utf-8")
+    folder = workspace.shorts_dir if args.profile == "short" else workspace.vertical_dir
+    print(f"{len(clips)} vertical clips -> {folder} ({time.perf_counter() - started:.0f}s)")
     return 0
+
+
+def _briefs(workspace: MatchWorkspace) -> ShortBriefs:
+    readings = [ScoreReading.from_dict(r) for r in _load_json(workspace.score_readings, "goals")]
+    goals = [ScoreChange.from_dict(g) for g in _load_json(workspace.goals, "goals")["goals"]]
+    words = [Word(**w) for w in _load_json(workspace.transcript, "candidates")]
+    return ShortBriefs(readings, goals, words, lambda: CaptionWriter(QwenGenerator()), CaptionStore(workspace.captions))
+
+
+def _short_windows(config: AppConfig, workspace: MatchWorkspace, clips: list[dict]) -> list[dict]:
+    """Goal, chance and skill clips cut down to Short length around the moment itself."""
+    timeline = BroadcastTimeline.from_dict(_load_json(workspace.broadcast, "moments"))
+    planner = ShortsPlanner(config.shorts, timeline, GoalMomentRefiner.from_wav(workspace.audio))
+    snapper = SceneSnapper(FfmpegSceneCutDetector(), SHORT_SNAP_SECONDS)
+    shorts = []
+    for clip in clips:
+        plan = planner.plan(clip)
+        if plan is None:
+            continue
+        plan = snapper.snap(workspace.video, plan)
+        shorts.append({**clip, "anchor": round(plan.anchor, 2), "start": round(plan.start, 2),
+                       "end": round(plan.end, 2)})
+    workspace.shorts.write_text(json.dumps(shorts, ensure_ascii=False, indent=1), encoding="utf-8")
+    return shorts
 
 
 def _cmd_balldata(args: argparse.Namespace) -> int:
@@ -279,6 +324,42 @@ def _cmd_trainball(args: argparse.Namespace) -> int:
         dataset_dir=args.data, output_dir=args.out, epochs=args.epochs, batch_size=args.batch, lr=1e-4,
     )
     print(f"ball model -> {args.out}")
+    return 0
+
+
+def _cmd_run(args: argparse.Namespace) -> int:
+    """Whole match to finished Shorts: every step reuses the cached result of an earlier run."""
+    steps = [("candidates", _cmd_candidates), ("goals", _cmd_goals), ("moments", _cmd_moments),
+             ("cut", _cmd_cut), ("vertical", _cmd_vertical)]
+    started = time.perf_counter()
+    for name, step in steps:
+        print(f"== {name}")
+        step_args = argparse.Namespace(**{**vars(args), "kinds": None, "profile": "short"})
+        if step(step_args):
+            print(f"stopped at {name}", file=sys.stderr)
+            return 1
+    print(f"done in {(time.perf_counter() - started) / 60:.1f} min; rate them with: fshorts studio")
+    return 0
+
+
+def _cmd_studio(args: argparse.Namespace) -> int:
+    import webbrowser
+
+    from fshorts.studio.server import serve
+
+    config = AppConfig.load(Path(args.config))
+    server = serve(config.paths.outputs, config.paths.labels / "shorts", args.host, args.port)
+    url = f"http://localhost:{args.port}/"
+    print(f"Rating studio on {url}")
+    if args.host != "127.0.0.1":
+        print(f"From a phone on the same Wi-Fi: http://<this PC's IP>:{args.port}/")
+    print("Ctrl+C to stop")
+    if not args.no_browser:
+        webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
     return 0
 
 
@@ -340,6 +421,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     moments = commands.add_parser("moments", help="find replays and ask a local LLM what each one shows")
     moments.add_argument("video")
+    moments.add_argument("--force", action="store_true", help="classify the replays again")
     moments.set_defaults(handler=_cmd_moments)
 
     cut = commands.add_parser("cut", help="plan and cut 16:9 highlight clips")
@@ -349,6 +431,8 @@ def build_parser() -> argparse.ArgumentParser:
     vertical = commands.add_parser("vertical", help="reframe cut clips to 9:16, following the action")
     vertical.add_argument("video")
     vertical.add_argument("--kinds", help="comma separated clip kinds, e.g. goal,chance")
+    vertical.add_argument("--profile", choices=("short", "full"), default="short",
+                          help="short = 10-20 s Shorts around the moment, full = the whole cut clip")
     vertical.set_defaults(handler=_cmd_vertical)
 
     balldata = commands.add_parser("balldata", help="build pseudo-labelled ball tiles to train our ball detector")
@@ -363,6 +447,16 @@ def build_parser() -> argparse.ArgumentParser:
     trainball.add_argument("--epochs", type=int, default=20)
     trainball.add_argument("--batch", type=int, default=16)
     trainball.set_defaults(handler=_cmd_trainball)
+
+    run = commands.add_parser("run", help="full pipeline: match video -> branded vertical Shorts")
+    run.add_argument("video")
+    run.set_defaults(handler=_cmd_run)
+
+    studio = commands.add_parser("studio", help="rate the finished Shorts one after another in the browser")
+    studio.add_argument("--port", type=int, default=8765)
+    studio.add_argument("--host", default="127.0.0.1", help="0.0.0.0 to open it from a phone on the same Wi-Fi")
+    studio.add_argument("--no-browser", action="store_true")
+    studio.set_defaults(handler=_cmd_studio)
 
     review = commands.add_parser("review", help="accept or reject cut clips (training labels)")
     review.add_argument("video")

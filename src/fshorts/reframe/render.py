@@ -64,11 +64,19 @@ class VerticalCropRenderer:
         width = min(src_w, int(round(height * self._aspect)))
         return width, height, top
 
+    def window_band(self) -> tuple[int, int]:
+        """Top and bottom of the video window on the canvas; the bands around it carry the overlay."""
+        out_w, out_h = self._size
+        if self._layout != "wide":
+            return 0, out_h
+        fg_h = int(round(out_w / self._aspect))
+        return (out_h - fg_h) // 2, (out_h + fg_h) // 2
+
     def crop_width(self, source_height: int) -> int:
         return self.window((10 ** 6, source_height))[0]
 
     def render(self, video: Path, start: float, end: float, path: CropPath, source: tuple[int, int], fps: float,
-               target: Path) -> Path:
+               target: Path, overlay=None) -> Path:
         src_w, src_h = source
         out_w, out_h = self._size
         win_w, win_h, top = self.window(source)
@@ -83,7 +91,10 @@ class VerticalCropRenderer:
             frames = self._sampler.sample(video, fps, Region(0, 0, src_w, src_h), start=start, duration=end - start)
             for time, frame in frames:
                 left = int(np.clip(path.center(time) - win_w / 2, 0, src_w - win_w))
-                encoder.stdin.write(self._compose(frame[top:top + win_h, left:left + win_w]).tobytes())
+                canvas = self._compose(frame[top:top + win_h, left:left + win_w])
+                if overlay is not None:
+                    canvas = overlay.apply(canvas, time)
+                encoder.stdin.write(canvas.tobytes())
         finally:
             encoder.stdin.close()
             encoder.wait()

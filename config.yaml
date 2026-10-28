@@ -68,6 +68,14 @@ scoreboard:
   min_confidence: 0.3
   region: [0, 0, 1000, 140]  # x, y, width, height on a 1920x1080 frame; covers the top-left score bug
 
+# Short versions for YouTube Shorts / Reels, timed after the reference Shorts
+# (median: opens 12.7 s before the goal, ends ~3 s after it on one reaction shot)
+shorts:
+  goal_pre: 12.0
+  goal_post: 4.0
+  chance_pre: 9.0
+  chance_post: 2.0
+
 paths:
   matches: data/matches
   outputs: data/outputs

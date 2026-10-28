@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shorts baholash</title>
+<style>
+  :root {
+    --bg: #0e0f13; --panel: #171920; --line: #262a35; --text: #eef0f5; --muted: #9aa1b2;
+    --accent: #ffd400; --good: #3ecf8e; --bad: #ff6b6b; --chip: #20232c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 17px; margin: 0; font-weight: 650; }
+  .progress { flex: 1; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; max-width: 420px; }
+  .progress span { display: block; height: 100%; background: var(--good); width: 0; transition: width .3s; }
+  .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+  label.toggle { color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  main { display: grid; grid-template-columns: minmax(280px, 420px) minmax(300px, 460px); gap: 28px;
+         justify-content: center; padding: 22px 16px 40px; }
+  .player { position: relative; }
+  video { width: 100%; aspect-ratio: 9 / 16; max-height: 82vh; background: #000; border-radius: 18px;
+          display: block; object-fit: contain; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px;
+           align-self: start; }
+  .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+  .kind { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 9px;
+          border-radius: 999px; background: var(--accent); color: #111; }
+  .kind.chance { background: #7cc4ff; } .kind.skill { background: #c49bff; }
+  .match { color: var(--muted); font-size: 13px; }
+  h2 { font-size: 19px; margin: 6px 0 2px; line-height: 1.3; }
+  .hook { color: var(--muted); margin: 0 0 14px; }
+  .section { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 16px 0 8px; }
+  .stars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .stars button { padding: 10px 0 8px; border-radius: 12px; border: 1px solid var(--line); background: var(--chip);
+                  color: var(--text); cursor: pointer; font: inherit; }
+  .stars button b { display: block; font-size: 22px; line-height: 1; }
+  .stars button small { color: var(--muted); font-size: 11px; }
+  .stars button.on { background: var(--accent); color: #111; border-color: var(--accent); }
+  .stars button.on small { color: #333; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips button { padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--chip);
+                  color: var(--text); cursor: pointer; font: inherit; font-size: 14px; }
+  .chips button.on.good { background: rgba(62,207,142,.18); border-color: var(--good); }
+  .chips button.on.bad { background: rgba(255,107,107,.16); border-color: var(--bad); }
+  textarea { width: 100%; min-height: 64px; resize: vertical; background: var(--chip); color: var(--text);
+             border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font: inherit; }
+  .actions { display: flex; gap: 10px; margin-top: 16px; }
+  .actions button { padding: 11px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--chip);
+                    color: var(--text); cursor: pointer; font: inherit; font-weight: 600; }
+  .actions .primary { flex: 1; background: var(--good); color: #062; border-color: var(--good); }
+  .actions .primary:disabled { opacity: .45; cursor: not-allowed; }
+  .keys { color: var(--muted); font-size: 12px; margin-top: 12px; }
+  kbd { background: var(--chip); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; font-size: 11px; }
+  .saved { color: var(--good); font-size: 13px; min-height: 18px; margin-top: 8px; }
+  .empty { text-align: center; color: var(--muted); padding: 80px 20px; grid-column: 1 / -1; }
+  @media (max-width: 760px) {
+    header { flex-wrap: wrap; padding: 10px 16px; gap: 8px 12px; }
+    header h1 { flex: 1 0 auto; }
+    .progress { order: 3; flex: 1 0 100%; max-width: none; }
+    main { grid-template-columns: minmax(0, 1fr); padding: 12px 16px 32px; gap: 14px; }
+    .panel { padding: 16px; }
+    .stars { gap: 6px; }
+    .actions { flex-wrap: wrap; }
+    .actions .primary { flex: 1 0 100%; order: -1; }
+    .keys { display: none; }
+    video { max-height: 72vh; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Shorts baholash</h1>
+  <div class="progress"><span id="bar"></span></div>
+  <span class="count" id="count">…</span>
+  <label class="toggle"><input type="checkbox" id="onlyNew" checked> Faqat baholanmaganlar</label>
+</header>
+<main id="main">
+  <div class="player"><video id="video" controls autoplay playsinline></video></div>
+  <section class="panel">
+    <div class="meta"><span class="kind" id="kind"></span><span class="match" id="match"></span></div>
+    <h2 id="title"></h2>
+    <p class="hook" id="hook"></p>
+
+    <div class="section">Umumiy baho</div>
+    <div class="stars" id="stars"></div>
+
+    <div class="section">Nimasi yaxshi / yomon? (ixtiyoriy)</div>
+    <div class="chips" id="reasons"></div>
+
+    <div class="section">Izoh (ixtiyoriy)</div>
+    <textarea id="note" placeholder="Masalan: zarba kesilib qolgan, boshi uzun..."></textarea>
+
+    <div class="actions">
+      <button id="prev">◀ Oldingi</button>
+      <button id="skip">O'tkazish</button>
+      <button class="primary" id="save" disabled>Saqlash va keyingi ▶</button>
+    </div>
+    <div class="saved" id="saved"></div>
+    <div class="keys"><kbd>1</kbd>–<kbd>5</kbd> baho · <kbd>Enter</kbd> saqlash · <kbd>←</kbd> <kbd>→</kbd> oldingi/keyingi · <kbd>R</kbd> qayta ko'rish</div>
+  </section>
+</main>
+<script>
+const STARS = [[1, "Yomon"], [2, "Kuchsiz"], [3, "O'rtacha"], [4, "Yaxshi"], [5, "Zo'r"]];
+const REASONS = {
+  great_moment: ["Zo'r lahza", "good"], good_cut: ["Yaxshi kesilgan", "good"],
+  boring: ["Zerikarli / mazmunsiz", "bad"], missed_action: ["Asosiy harakat kirmagan", "bad"],
+  starts_late: ["Kech boshlangan", "bad"], ends_early: ["Erta tugagan", "bad"], too_long: ["Juda uzun", "bad"],
+  ball_lost: ["Kamera to'pni yo'qotgan", "bad"], wrong_text: ["Yozuv / ism noto'g'ri", "bad"],
+  replay: ["Takror lavha", "bad"], bad_quality: ["Sifat yomon", "bad"],
+};
+const KINDS = { goal: "Gol", chance: "Xavfli vaziyat", skill: "Skill" };
+let items = [], order = [], pos = 0, stars = 0, picked = new Set();
+const $ = id => document.getElementById(id);
+
+function build() {
+  $("stars").innerHTML = STARS.map(([n, t]) => `<button data-n="${n}"><b>${n}</b><small>${t}</small></button>`).join("");
+  $("stars").onclick = e => { const b = e.target.closest("button"); if (b) setStars(+b.dataset.n); };
+  $("reasons").innerHTML = Object.entries(REASONS)
+    .map(([k, [t, tone]]) => `<button data-k="${k}" class="${tone}">${t}</button>`).join("");
+  $("reasons").onclick = e => {
+    const b = e.target.closest("button"); if (!b) return;
+    picked.has(b.dataset.k) ? picked.delete(b.dataset.k) : picked.add(b.dataset.k); paintReasons();
+  };
+}
+function setStars(n) { stars = n; [...$("stars").children].forEach(b => b.classList.toggle("on", +b.dataset.n === n));
+                       $("save").disabled = !n; }
+function paintReasons() { [...$("reasons").children].forEach(b => b.classList.toggle("on", picked.has(b.dataset.k))); }
+function progress() {
+  const done = items.filter(i => i.rating).length;
+  $("count").textContent = `${done} / ${items.length} baholandi`;
+  $("bar").style.width = items.length ? `${100 * done / items.length}%` : "0";
+}
+function rebuildOrder(keepId) {
+  order = items.map((_, i) => i).filter(i => !$("onlyNew").checked || !items[i].rating || items[i].id === keepId);
+}
+function show() {
+  progress();
+  if (!order.length) {
+    $("main").innerHTML = `<div class="empty"><h2>Hammasi baholandi 🎉</h2>
+      <p>Rahmat! Yangi kliplar tayyor bo'lsa, sahifani yangilang.</p></div>`;
+    return;
+  }
+  pos = Math.max(0, Math.min(pos, order.length - 1));
+  const item = items[order[pos]];
+  $("video").src = item.video;
+  $("video").play().catch(() => {});
+  $("kind").textContent = KINDS[item.kind] || item.kind;
+  $("kind").className = `kind ${item.kind}`;
+  $("match").textContent = `${item.match} · ${item.id} · ${(item.end - item.start).toFixed(0)} s`;
+  $("title").textContent = item.title || item.label;
+  $("hook").textContent = item.hook ? `Hook: ${item.hook}` : "";
+  const r = item.rating;
+  setStars(r ? r.stars : 0);
+  picked = new Set(r ? r.reasons : []); paintReasons();
+  $("note").value = r ? r.note : "";
+  $("saved").textContent = r ? `Avval baholangan: ${r.stars} ★` : "";
+}
+async function save() {
+  if (!stars) return;
+  const item = items[order[pos]];
+  const res = await fetch("/api/rate", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ match: item.match, id: item.id, stars, reasons: [...picked], note: $("note").value }) });
+  if (!res.ok) { $("saved").textContent = "Saqlanmadi: " + (await res.text()); return; }
+  item.rating = (await res.json()).rating;
+  rebuildOrder(null);
+  pos = $("onlyNew").checked ? Math.min(pos, order.length - 1) : pos + 1;
+  if (!$("onlyNew").checked && pos >= order.length) pos = order.length - 1;
+  show();
+}
+function move(step) { pos = Math.max(0, Math.min(order.length - 1, pos + step)); show(); }
+
+$("save").onclick = save;
+$("prev").onclick = () => move(-1);
+$("skip").onclick = () => move(1);
+$("onlyNew").onchange = () => { const cur = items[order[pos]]; rebuildOrder(cur && cur.id); pos = 0; show(); };
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "TEXTAREA") { if (e.key === "Enter" && e.ctrlKey) save(); return; }
+  if (e.key >= "1" && e.key <= "5") setStars(+e.key);
+  else if (e.key === "Enter") save();
+  else if (e.key === "ArrowRight") move(1);
+  else if (e.key === "ArrowLeft") move(-1);
+  else if (e.key.toLowerCase() === "r") { $("video").currentTime = 0; $("video").play(); }
+});
+
+build();
+fetch("/api/queue").then(r => r.json()).then(data => { items = data.items; rebuildOrder(null); show(); });
+</script>
+</body>
+</html>

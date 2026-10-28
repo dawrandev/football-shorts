@@ -56,5 +56,19 @@ class MatchWorkspace:
         return path
 
     @property
+    def shorts(self) -> Path:
+        return self.root / "shorts.json"
+
+    @property
+    def captions(self) -> Path:
+        return self.root / "captions.json"
+
+    @property
+    def shorts_dir(self) -> Path:
+        path = self.root / "shorts"
+        path.mkdir(exist_ok=True)
+        return path
+
+    @property
     def detections_dir(self) -> Path:
         return self.root / "detections"
