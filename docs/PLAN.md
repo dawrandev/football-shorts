@@ -182,6 +182,65 @@ Asosiy muammo: "xavfli vaziyat" kliplarining ~70% i bo'sh edi. Sharhlovchi stati
   - Moslashuvchan zoom.
   - 10 ta klip bo'yicha sifat bahosi.
 
+## 3e. Video sifati va o'z to'p modelimiz (2026-10-26)
+
+**Sifat.** Manba YouTube 1080p VP9, ~3.5 Mbit/s. Yuqoriroq formati faqat Premium uchun.
+- Vertikal endi to'g'ridan-to'g'ri match faylidan yasaladi: bitta kodlash, avval ikki marta edi.
+- Kattalashtirish Lanczos bilan, ustidan yengil unsharp.
+- NVENC: p7/hq, CQ 18, AQ, ~18 Mbit/s.
+
+**To'pni kuzatish.**
+- 3×2 tile'larda qidirish: tayyor model to'pni jonli kadrlarning 75% idan 92% igacha topadi.
+- Constant-velocity tracker qo'lqop, bosh va butsani rad etadi.
+- To'p ko'rinmasa, TV kamera markaziga tayaniladi.
+
+**O'z to'p modelimiz (self-training).**
+- `fshorts balldata`: kesmali detektor + tracker tasdiqlagan to'plar avtomatik label bo'ladi. 2 match'dan 2846 train va 312 valid tile, BRA–KOR faqat test uchun. Label aniqligi ~93% (30 namunadan 28 tasi).
+- `fshorts trainball`: RF-DETR Medium fine-tune, 640 px, 20 epoch, ~15 daqiqa. Eng yaxshi val mAP 0.774.
+- O'qitishda ishlatilmagan BRA–KOR match'ida, 19 ta klip:
+  - to'p topilgan kadrlar 45.9% → 51.3%;
+  - to'p 9:16 oyna ichida 94.3% → 95.3%;
+  - ishonch 0.5–0.6 → 0.85–0.93;
+  - 30 namunadan 27 tasida haqiqiy to'p.
+- Keyingi qadamlar: ikkinchi self-training raundi, xatolar (butsa, logotip) hard-negative bo'ladi, ko'proq match qo'shiladi.
+
+## 3f. Keng kadr, super-resolution, ovoz (2026-10-26)
+
+**`wide` layout (standart).**
+- To'p ortidan yuradigan 4:5 nisbatli oyna 9:16 ekranning o'rtasida turadi, tepa va pastki qismi oynaning xiralashtirilgan nusxasi bilan to'ldiriladi.
+- Oyna 9:16 crop'dan 47% keng, kattalashtirish ~1.4×.
+- To'p kadr ichida: `crop` layout'da ~95%, `wide` layout'da ~99% (BRA–KOR, 19 klip).
+
+**Super-resolution.**
+- Real-ESRGAN general-x4v3 (BSD-3), `weights_only` yuklanadi.
+- x4 natija GPU'da kichraytiriladi, bir kadr ~31 ms.
+- Siqish bloklari yo'qoladi, kontur va raqamlar tiniqlashadi. Kamchiligi: o't sal silliqlashadi.
+
+**Sharhni olib tashlash — hali yechilmagan.**
+- Demucs stadion shovqinini ham "vocals"ga qo'shib yuboradi.
+- SepFormer DNS4 sharhning ko'p qismini oladi, lekin baland qichqiriqlar qoladi.
+- DeepFilterNet Windows/py3.12 da build bo'lmaydi. ClearerVoice eski numpy va opencv talab qiladi, shuning uchun alohida venv kerak bo'ladi.
+
+## 3g. M5 — tayyor Shorts va baholash sayti (2026-10-28)
+
+- **Qisqa versiya.** `fshorts vertical` standart holatda qisqa versiya yasaydi. Vaqtlar namunalar o'lchovidan olingan: `docs/research/Namuna Shorts tahlili.md`, 8-bo'lim.
+  - Gol: −12/+4 s. Gol lahzasi = ovoz cho'qqisi − 1.5 s, chunki hisob paneli 0–6 s kechikadi.
+  - Xavfli vaziyat va skill: −9/+2 s.
+  - To'liq versiya `--profile full` bilan qoladi.
+- **Bezak** (`wide` layout'ning tepa va past qismida):
+  - hisob paneli, gol lahzasida hisob sariq rangda yangilanadi;
+  - inglizcha hook birinchi 45% davomida;
+  - lahza belgisi: GOAL!, WHAT A SAVE, SO CLOSE, JUST WIDE, BLOCKED, SKILLS;
+  - "⚽ O'yinchi 29'" yozuvi.
+- **Sarlavha.** Qwen3-8B sharhdan inglizcha hook va YouTube sarlavhasini yozadi, natija `captions.json` da. Render oldidan LLM xotiradan bo'shatiladi, chunki aks holda GPU xotirasi to'lib qoladi.
+- **`fshorts run <match>`:** butun jarayon bitta buyruq bilan, keshlangan qadamlar qayta ishlatiladi.
+- **`fshorts studio`:** brauzerda Shorts'larni ketma-ket ko'rib baholash.
+  - 1–5 yulduz, sabab tugmalari va izoh.
+  - Baholar `data/labels/human/shorts/` ga yoziladi, ranker uchun dataset bo'ladi.
+  - Telefondan ochish uchun `--host 0.0.0.0`.
+- **Ma'lum kamchilik:** 8B model ba'zan ismlarni chalkashtiradi ("Saved by Wang Yi-chan"). Keyingi qadam: jamoa tarkibi bilan tekshirish.
+
+## 4. Xatarlar
 
 - **Hisob paneli har telekanalda turlicha.** ROI preset'lar bilan hal qilinadi. Yangi telekanal = yangi preset.
 - **Keng kadrlarda to'p juda kichik.** Detektor kadrni bo'laklarga bo'lib qidiradi (`InferenceSlicer`). To'p baribir topilmasa, xiralashtirilgan fonli zaxira formatga o'tamiz.
