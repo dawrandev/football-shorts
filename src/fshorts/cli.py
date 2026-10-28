@@ -57,6 +57,7 @@ from fshorts.reframe import (
     VerticalCropRenderer,
 )
 from fshorts.review import LabelStore, ReviewSession
+from fshorts.studio.ratings import RatingStore
 from fshorts.workspace import MatchWorkspace
 
 DEFAULT_CONFIG = Path("config.yaml")
@@ -218,7 +219,13 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
     out = config.output
     workspace = MatchWorkspace(config.paths.outputs, Path(args.video))
     clips = _load_json(workspace.clips, "cut")
+    rated: dict[str, dict] = {}
+    if args.profile == "short" and args.skip_rated and workspace.shorts.is_file():
+        # Keep what the viewer already rated exactly as they saw it; re-time and re-render the rest
+        done = RatingStore(config.paths.labels / "shorts").load(workspace.video.stem)
+        rated = {c["id"]: c for c in _load_json(workspace.shorts, "vertical") if c["id"] in done}
     clips = _short_windows(config, workspace, clips) if args.profile == "short" else clips
+    clips = [rated.get(c["id"], c) for c in clips]
     if args.kinds:
         clips = [c for c in clips if c["kind"] in args.kinds.split(",")]
 
@@ -230,12 +237,14 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
     blur = BlurFitRenderer(out.width, out.height, out.encoder, out.bitrate)
     briefs = _briefs(workspace) if args.profile == "short" else None
     if briefs is not None:
-        briefs.prepare(clips)
+        briefs.prepare([c for c in clips if c["id"] not in rated])
     started = time.perf_counter()
     video = Path(args.video)
     match = prober.probe(video)
     size = (match.width, match.height)
     for clip in clips:
+        if clip["id"] in rated:
+            continue
         start, end = clip["start"], clip["end"]
         target = (workspace.shorts_dir if args.profile == "short" else workspace.vertical_dir) / clip["file"]
         cache = CachedDetections(workspace.detections_dir / f"{clip['id']}_{args.profile}.json")
@@ -334,7 +343,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
     started = time.perf_counter()
     for name, step in steps:
         print(f"== {name}")
-        step_args = argparse.Namespace(**{**vars(args), "kinds": None, "profile": "short"})
+        step_args = argparse.Namespace(**{**vars(args), "kinds": None, "profile": "short", "skip_rated": True})
         if step(step_args):
             print(f"stopped at {name}", file=sys.stderr)
             return 1
@@ -433,6 +442,8 @@ def build_parser() -> argparse.ArgumentParser:
     vertical.add_argument("--kinds", help="comma separated clip kinds, e.g. goal,chance")
     vertical.add_argument("--profile", choices=("short", "full"), default="short",
                           help="short = 10-20 s Shorts around the moment, full = the whole cut clip")
+    vertical.add_argument("--skip-rated", action="store_true",
+                          help="leave Shorts that already have a rating as they are")
     vertical.set_defaults(handler=_cmd_vertical)
 
     balldata = commands.add_parser("balldata", help="build pseudo-labelled ball tiles to train our ball detector")

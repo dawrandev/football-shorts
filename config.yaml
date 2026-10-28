@@ -72,9 +72,9 @@ scoreboard:
 # (median: opens 12.7 s before the goal, ends ~3 s after it on one reaction shot)
 shorts:
   goal_pre: 12.0
-  goal_post: 4.0
+  goal_post: 8.0      # viewers marked "ends early" on 4 s; the celebration needs room
   chance_pre: 9.0
-  chance_post: 2.0
+  chance_post: 4.0    # still stops where the replay starts
 
 paths:
   matches: data/matches

@@ -111,3 +111,43 @@ Mediana: goldan oldin 12.7 s, keyin 3 s, jami ~16 s. Hook klipning birinchi ~45%
 - Xavfli vaziyat va skill: −9 s / +2 s, takror boshlanguncha.
 
 **Aniq gol lahzasi.** Hisob paneli asl goldan 0–6 s kech yangilanadi, buni BRA–KOR'ning 5 golida kadrma-kadr tekshirdim. Stadion hayqirig'i to'p to'rga kirgandan ~1.5 s keyin eng baland nuqtaga chiqadi. Qoida: gol lahzasi = hisob o'zgarishidan −15…+3 s oraliqdagi ovoz cho'qqisi − 1.5 s. Masalan Richarlison goli: kadrda −6.0 s, qoida bo'yicha −6.2 s.
+
+## 9. Top-30 futbol Shorts tahlili (2026-10-28)
+
+**Manba.** 12 ta yirik kanalning (UEFA, FIFA, PSG, Real Madrid, Barcelona, Man City, 433, B/R Football, OneFootball, ESPN FC, Premier League) Shorts bo'limidan oxirgi 60 tadan, jami 660 ta Short olindi. Ko'rishlar bo'yicha saralandi, o'yindan tashqari videolar (kiyinish xonasi, reklama, oila) chiqarildi. Qolganlardan 29 tasi yuklab olindi: 1.1M–14M ko'rish. Ro'yxat `data/references/top/top30.json`, o'lchovlar `metrics.json` da.
+
+**Raqamlar:**
+
+| O'lchov | Natija |
+|---|---|
+| Uzunlik | mediana **10.1 s**, p25 7.7 s, p75 15.9 s; 4.7–34.5 s |
+| Kamera almashishi | mediana **0**; 29 tadan 21 tasi bitta uzluksiz lahza |
+| Ovoz | UEFA, klublar, PSG: sharhsiz (stadion shovqini yoki musiqa); Premier League: sharh saqlangan |
+| Format | hammasi to'liq 9:16 kadr, xira fonli bandlar yo'q |
+
+**Yozuvlar (asosiy xulosa):**
+1. **Bitta qisqa jumla + emoji**, kichik, oq, qalin. Quti yo'q, faqat yengil soya. Kadr o'rtasi va pastki qismi orasida, taxminan 55–70% balandlikda. Misollar: "Most satisfying finish ever? 😮‍💨", "Sommer foot save 🤯", "Chaotic second goal 🤣", "Harry Kane's goal-kick 🤯", "Halfway line goal 🤯", "Pure chaos", "Iconic.".
+2. **Ikki bosqichli matn** (setup → punchline): "Try to take the ball off João Neves" → "Impossible", "Dominik Szoboszlai's recovery speed" → "Here he comes!", "How long can they keep the ball in the air?" → "Let's try again…".
+3. **Kutish (teaser) matni:** "Wait for Mbappé's pace 🤯", "The score… 👀", "Zion Suzuki appeared out of NOWHERE…". Oxirigacha ko'rishga undaydi.
+4. **Teskari sanoq va spotlight:** "Bouaddi magic in 5… 3… 2…", o'yinchi atrofida yorug' doira, qolgan qism qoraytirilgan.
+5. **O'yinchi nomi tegi:** kichik oq yozuv o'yinchi ustida (HAZARD, MARCELO, FABIAN, DOUÉ, SZOBOSZLAI).
+6. **Grafikalar:** masofa belgilari (7 m → 28 m → 47 m → 51 m), sekundomer (00:13), doira va spotlight.
+7. **Davomiyligi:** ko'pincha birinchi 40–70% qismda turadi, ba'zan butun klip davomida.
+8. **Hisob paneli:** UEFA telekanalning o'z panelini qoldiradi (masalan "87:10 SAB 1-0 SLA"), Premier League o'z panelini qo'yadi. Ko'pchilikda esa hisob umuman ko'rsatilmaydi.
+9. **Katta "GOAL" animatsiyasi:** 29 tadan hech birida yo'q.
+10. **Kanal belgisi:** kichik logotip burchakda (LALIGA, PL sheri, klub gerbi).
+
+**Video:**
+- **Bitta lahza, bitta kadr.** Klip harakat boshlanishidan (yugurish, pas) natijagacha davom etadi. Gollarda oxirida 1–2 s quvonish yaqin plani bo'ladi: Doué, Ferran, Brighton.
+- **Kadr.** To'liq 9:16 crop. Ba'zilari juda yaqin (Yamal, Doué), ko'pchiligi esa ancha keng: bir vaqtning o'zida 6–10 o'yinchi ko'rinadi. Ular 4K signaldan kesadi.
+- **Sekinlashtirish va zoom.** Skill kliplarida sekinlashtirilgan takror yoki yaqin zoom (Doué vs Lamine, Ndiaye).
+- **Rang.** Ba'zan oxirida qoraytirish yoki vinyetka (PSG "Impossible").
+
+**Bizga xulosa (taklif):**
+1. Shorts uzunligini qisqartirish: gol 10–16 s, vaziyat 7–10 s. Bizda hozir 11–20 s.
+2. Hook uslubi: bitta qisqa jumla, teaser yoki ikki bosqichli variant. Kichikroq shrift, video ustida 60% balandlikda, quti va band yo'q.
+3. "GOAL!" belgisini kichraytirish yoki olib tashlash. Top Shorts'da bunday belgi yo'q.
+4. Hisob panelini ixtiyoriy qilish va kichraytirish.
+5. O'yinchi nomi tegi: tracker va ism bor, qo'shish mumkin.
+6. Spotlight doira va sekinlashtirish: skill va xavfli vaziyatlar uchun.
+7. Layout: foydalanuvchi keng kadrni yoqtirgan, top Shorts esa to'liq 9:16. Ikkalasini baholash saytida solishtirish kerak.
