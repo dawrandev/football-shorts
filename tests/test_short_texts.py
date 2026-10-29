@@ -73,6 +73,7 @@ def test_rules_reject_shouting_grammar_and_the_wrong_team_leading():
     assert "'lead' given to Portugal" in problems("Portugal lead…", MomentFacts("goal", "Portugal", "Spain", 60,
                                                                           player_team="Spain", go_ahead=True), SQUAD)
     assert problems("Spain looking for an equaliser…", nacho, SQUAD) == []
+    assert "unsupported 'still'" in problems("The score… still 1-1", nacho, SQUAD)
 
 
 def test_writer_never_repeats_a_line_in_one_match():

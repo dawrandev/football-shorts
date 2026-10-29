@@ -17,6 +17,8 @@ CLAIMS = [
     (r"\b(late|last|final|stoppage|dying)\b", lambda f: f.late or (f.minute or 0) >= 85),
     (r"\b(equali[sz]\w*|level|leveller)\b", lambda f: f.kind == "goal" and f.equaliser),
     (r"\b(winner|lead|ahead|in front)\b", lambda f: f.kind == "goal" and f.go_ahead),
+    # A goal always changes the score
+    (r"\bstill\b", lambda f: f.kind != "goal"),
     (r"\b(penalty|penalties|spot[- ]kick|from the spot|pen)\b", lambda f: f.penalty),
     (r"\bfree[- ]kick\b", lambda f: f.free_kick),
     (r"\bown goal\b", lambda f: f.own_goal),
