@@ -1,0 +1,182 @@
+[
+ {
+  "clip_id": "01_chance_512",
+  "stars": 3,
+  "reasons": [
+   "ends_early"
+  ],
+  "note": "",
+  "start": 501.5,
+  "end": 516.0,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:37:22+00:00"
+ },
+ {
+  "clip_id": "03_goal_858",
+  "stars": 3,
+  "reasons": [
+   "wrong_text",
+   "ball_lost"
+  ],
+  "note": "",
+  "start": 845.87,
+  "end": 867.27,
+  "kind": "goal",
+  "rated_at": "2026-10-29T05:37:37+00:00"
+ },
+ {
+  "clip_id": "05_goal_2542",
+  "stars": 4,
+  "reasons": [
+   "ends_early",
+   "great_moment",
+   "ball_lost"
+  ],
+  "note": "",
+  "start": 2522.0,
+  "end": 2541.8,
+  "kind": "goal",
+  "rated_at": "2026-10-29T05:38:05+00:00"
+ },
+ {
+  "clip_id": "07_goal_3111",
+  "stars": 5,
+  "reasons": [
+   "good_cut",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 3088.0,
+  "end": 3108.2,
+  "kind": "goal",
+  "rated_at": "2026-10-29T05:38:28+00:00"
+ },
+ {
+  "clip_id": "09_chance_3373",
+  "stars": 3,
+  "reasons": [
+   "wrong_text",
+   "good_cut",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 3364.5,
+  "end": 3377.5,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:38:44+00:00"
+ },
+ {
+  "clip_id": "11_chance_3561",
+  "stars": 3,
+  "reasons": [
+   "starts_late",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 3552.5,
+  "end": 3565.5,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:38:58+00:00"
+ },
+ {
+  "clip_id": "13_goal_3658",
+  "stars": 5,
+  "reasons": [
+   "great_moment",
+   "good_cut",
+   "ball_lost"
+  ],
+  "note": "ozgina wide kerak\n",
+  "start": 3638.5,
+  "end": 3658.6,
+  "kind": "goal",
+  "rated_at": "2026-10-29T05:39:26+00:00"
+ },
+ {
+  "clip_id": "15_chance_3907",
+  "stars": 4,
+  "reasons": [
+   "good_cut"
+  ],
+  "note": "",
+  "start": 3898.5,
+  "end": 3911.5,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:39:39+00:00"
+ },
+ {
+  "clip_id": "17_chance_3966",
+  "stars": 3,
+  "reasons": [
+   "good_cut"
+  ],
+  "note": "",
+  "start": 3955.63,
+  "end": 3970.5,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:39:56+00:00"
+ },
+ {
+  "clip_id": "19_goal_4037",
+  "stars": 5,
+  "reasons": [
+   "good_cut"
+  ],
+  "note": "bunday videolarga yoki gollarga takroriy lavha kerakga o'xshayabdi? u bilanham tekshirib ko'rish kerak manimcha",
+  "start": 4019.0,
+  "end": 4041.07,
+  "kind": "goal",
+  "rated_at": "2026-10-29T05:40:48+00:00"
+ },
+ {
+  "clip_id": "21_goal_4318",
+  "stars": 5,
+  "reasons": [
+   "good_cut",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 4299.0,
+  "end": 4320.43,
+  "kind": "goal",
+  "rated_at": "2026-10-29T05:41:11+00:00"
+ },
+ {
+  "clip_id": "23_chance_5182",
+  "stars": 2,
+  "reasons": [
+   "boring",
+   "starts_late"
+  ],
+  "note": "",
+  "start": 5173.5,
+  "end": 5186.5,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:41:23+00:00"
+ },
+ {
+  "clip_id": "25_chance_5303",
+  "stars": 3,
+  "reasons": [
+   "good_cut",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 5294.0,
+  "end": 5305.5,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:41:41+00:00"
+ },
+ {
+  "clip_id": "27_goal_5772",
+  "stars": 4,
+  "reasons": [
+   "good_cut"
+  ],
+  "note": "bunday gollarga rostan takroriy lavha kerakdek\n",
+  "start": 5756.5,
+  "end": 5776.67,
+  "kind": "goal",
+  "rated_at": "2026-10-29T05:42:19+00:00"
+ }
+]

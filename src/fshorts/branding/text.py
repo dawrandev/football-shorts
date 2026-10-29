@@ -32,6 +32,18 @@ class TextPainter:
         self._size = size
 
     def wrap(self, text: str, max_width: int) -> list[str]:
+        """Greedy wrap, then narrowed as far as the line count allows so no word is left alone."""
+        lines = self._greedy(text, max_width)
+        low, high = 1, max_width
+        while len(lines) > 1 and low < high:
+            middle = (low + high) // 2
+            if len(self._greedy(text, middle)) == len(lines):
+                high = middle
+            else:
+                low = middle + 1
+        return self._greedy(text, high) if len(lines) > 1 else lines
+
+    def _greedy(self, text: str, max_width: int) -> list[str]:
         lines, current = [], ""
         for word in text.split():
             trial = f"{current} {word}".strip()

@@ -1,0 +1,262 @@
+[
+ {
+  "clip_id": "01_skill_340",
+  "stars": 3,
+  "reasons": [
+   "boring",
+   "missed_action",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 331.0,
+  "end": 342.0,
+  "kind": "skill",
+  "rated_at": "2026-10-28T18:30:13+00:00"
+ },
+ {
+  "clip_id": "03_goal_565",
+  "stars": 4,
+  "reasons": [
+   "great_moment",
+   "good_cut",
+   "ends_early"
+  ],
+  "note": "yozuvlarga etibor berishimiz kerak. youtube tan shunday shorts videolarning 30 tasini ko'rib chiq va undagi yozuvlarga etibor berib chiq. shorts videolarning eng ko'p view hamda likes borlarni terib chiqib shulardan namuna ol. faqat textlar emas videolardanham namuna olishing kerak ",
+  "start": 550.0,
+  "end": 566.0,
+  "kind": "goal",
+  "rated_at": "2026-10-28T18:31:58+00:00"
+ },
+ {
+  "clip_id": "05_goal_902",
+  "stars": 3,
+  "reasons": [
+   "ends_early"
+  ],
+  "note": "",
+  "start": 888.5,
+  "end": 904.7,
+  "kind": "goal",
+  "rated_at": "2026-10-28T18:32:58+00:00"
+ },
+ {
+  "clip_id": "07_chance_1137",
+  "stars": 4,
+  "reasons": [
+   "ends_early",
+   "good_cut",
+   "great_moment"
+  ],
+  "note": "",
+  "start": 1128.5,
+  "end": 1139.5,
+  "kind": "chance",
+  "rated_at": "2026-10-28T18:33:35+00:00"
+ },
+ {
+  "clip_id": "09_chance_1165",
+  "stars": 4,
+  "reasons": [
+   "good_cut"
+  ],
+  "note": "",
+  "start": 1156.0,
+  "end": 1167.0,
+  "kind": "chance",
+  "rated_at": "2026-10-28T18:34:05+00:00"
+ },
+ {
+  "clip_id": "11_goal_1859",
+  "stars": 5,
+  "reasons": [
+   "good_cut",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 1840.5,
+  "end": 1856.7,
+  "kind": "goal",
+  "rated_at": "2026-10-28T18:34:37+00:00"
+ },
+ {
+  "clip_id": "13_chance_2070",
+  "stars": 1,
+  "reasons": [
+   "boring",
+   "missed_action"
+  ],
+  "note": "",
+  "start": 2061.0,
+  "end": 2072.0,
+  "kind": "chance",
+  "rated_at": "2026-10-28T18:35:07+00:00"
+ },
+ {
+  "clip_id": "15_chance_2224",
+  "stars": 1,
+  "reasons": [
+   "boring"
+  ],
+  "note": "",
+  "start": 2215.5,
+  "end": 2226.5,
+  "kind": "chance",
+  "rated_at": "2026-10-28T18:35:26+00:00"
+ },
+ {
+  "clip_id": "17_goal_2309",
+  "stars": 5,
+  "reasons": [
+   "good_cut",
+   "ends_early",
+   "great_moment"
+  ],
+  "note": "",
+  "start": 2295.0,
+  "end": 2311.0,
+  "kind": "goal",
+  "rated_at": "2026-10-28T18:36:24+00:00"
+ },
+ {
+  "clip_id": "19_chance_2937",
+  "stars": 4,
+  "reasons": [
+   "great_moment",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 2928.0,
+  "end": 2939.5,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:33:36+00:00"
+ },
+ {
+  "clip_id": "21_chance_3117",
+  "stars": 2,
+  "reasons": [
+   "boring"
+  ],
+  "note": "",
+  "start": 3108.5,
+  "end": 3121.5,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:33:57+00:00"
+ },
+ {
+  "clip_id": "23_chance_3349",
+  "stars": 3,
+  "reasons": [
+   "ball_lost",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 3340.0,
+  "end": 3354.53,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:34:15+00:00"
+ },
+ {
+  "clip_id": "25_chance_3403",
+  "stars": 1,
+  "reasons": [
+   "boring",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 3394.5,
+  "end": 3405.0,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:34:28+00:00"
+ },
+ {
+  "clip_id": "27_chance_3916",
+  "stars": 3,
+  "reasons": [
+   "ends_early"
+  ],
+  "note": "",
+  "start": 3907.5,
+  "end": 3920.5,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:34:53+00:00"
+ },
+ {
+  "clip_id": "29_goal_5123",
+  "stars": 3,
+  "reasons": [
+   "ball_lost",
+   "good_cut"
+  ],
+  "note": "",
+  "start": 5105.5,
+  "end": 5126.03,
+  "kind": "goal",
+  "rated_at": "2026-10-29T05:35:14+00:00"
+ },
+ {
+  "clip_id": "31_chance_5322",
+  "stars": 3,
+  "reasons": [
+   "great_moment",
+   "wrong_text"
+  ],
+  "note": "",
+  "start": 5313.5,
+  "end": 5326.0,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:35:28+00:00"
+ },
+ {
+  "clip_id": "33_chance_5550",
+  "stars": 3,
+  "reasons": [
+   "starts_late",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 5541.5,
+  "end": 5554.5,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:36:05+00:00"
+ },
+ {
+  "clip_id": "35_chance_5691",
+  "stars": 2,
+  "reasons": [
+   "starts_late",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 5682.0,
+  "end": 5692.5,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:36:21+00:00"
+ },
+ {
+  "clip_id": "37_chance_5879",
+  "stars": 3,
+  "reasons": [
+   "wrong_text",
+   "good_cut",
+   "starts_late",
+   "ends_early"
+  ],
+  "note": "",
+  "start": 5870.0,
+  "end": 5883.0,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:36:39+00:00"
+ },
+ {
+  "clip_id": "39_chance_5959",
+  "stars": 3,
+  "reasons": [
+   "starts_late"
+  ],
+  "note": "",
+  "start": 5950.0,
+  "end": 5963.0,
+  "kind": "chance",
+  "rated_at": "2026-10-29T05:37:01+00:00"
+ }
+]

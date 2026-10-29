@@ -58,6 +58,31 @@ class BroadcastTimeline:
                 start = None
         return stretches
 
+    def views_between(self, start: float, end: float) -> list[str]:
+        return list(self.views[self._index(start):self._index(end)])
+
+    def runs(self, start: float, end: float, views: tuple[str, ...], blip: int = 1) -> list[tuple[float, float]]:
+        """Stretches of `views` frames between start and end; a lone `blip` of other frames is a misread."""
+        found, first, last = [], None, None
+        for i in range(self._index(start), self._index(end)):
+            if self.views[i] not in views:
+                continue
+            if first is not None and i - last - 1 > blip:
+                found.append((self._time(first), self._time(last + 1)))
+                first = None
+            first = i if first is None else first
+            last = i
+        if first is not None:
+            found.append((self._time(first), self._time(last + 1)))
+        return found
+
+    def first_break(self, after: float, within: float, views: tuple[str, ...] = ("logo",)) -> float | None:
+        """First hidden-bug or `views` frame from `after` on: where a live clip has to stop."""
+        for i in range(self._index(after), min(self._index(after + within) + 1, len(self.views))):
+            if not self.bug_visible[i] or self.views[i] in views:
+                return self._time(i)
+        return None
+
     def is_live_play(self, time: float) -> bool:
         i = self._index(time)
         return self.bug_visible[i] and self.views[i] in PLAY_VIEWS

@@ -9,6 +9,8 @@ from pathlib import Path
 REASONS = (
     "great_moment", "good_cut", "boring", "missed_action", "starts_late", "ends_early", "too_long",
     "ball_lost", "wrong_text", "replay", "bad_quality",
+    # About the caption alone, added with the M6 text work
+    "good_text", "wrong_name", "boring_text", "text_timing", "text_size", "good_replay",
 )
 
 
@@ -50,3 +52,38 @@ class RatingStore:
         self._folder.mkdir(parents=True, exist_ok=True)
         rows = [asdict(r) for r in sorted(ratings.values(), key=lambda r: r.start)]
         (self._folder / f"{match}.json").write_text(json.dumps(rows, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+@dataclass(frozen=True)
+class Comparison:
+    """How one version of the Shorts was rated against another, on the clips rated in both."""
+
+    kind: str
+    pairs: int
+    old_stars: float
+    new_stars: float
+    better: int
+    worse: int
+
+
+def compare(old: dict[str, ShortRating], new: dict[str, ShortRating]) -> list[Comparison]:
+    """Per clip kind, plus "all", over the ids rated in both versions."""
+    shared = sorted(set(old) & set(new))
+    found = []
+    for kind in sorted({old[i].kind for i in shared}) + ["all"]:
+        ids = [i for i in shared if kind == "all" or old[i].kind == kind]
+        if ids:
+            found.append(Comparison(
+                kind, len(ids),
+                sum(old[i].stars for i in ids) / len(ids), sum(new[i].stars for i in ids) / len(ids),
+                sum(new[i].stars > old[i].stars for i in ids), sum(new[i].stars < old[i].stars for i in ids),
+            ))
+    return found
+
+
+def reason_counts(ratings: dict[str, ShortRating]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for rating in ratings.values():
+        for reason in rating.reasons:
+            counts[reason] = counts.get(reason, 0) + 1
+    return dict(sorted(counts.items(), key=lambda kv: -kv[1]))

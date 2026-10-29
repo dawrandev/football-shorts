@@ -14,6 +14,13 @@ HOP_SECONDS = 0.1
 SMOOTH_SECONDS = 1.0
 # Kinds that get a Short; replays stay full-length assets
 SHORT_KINDS = ("goal", "chance", "skill")
+# One replay angle appended to a Short: long enough to see the action again, short enough to keep pace
+REPLAY_MIN_SECONDS = 2.5
+REPLAY_MAX_SECONDS = 7.0
+# Camera views a replay angle is judged by; the angle from behind the goal shows a finish best
+REPLAY_VIEWS = {"goalmouth": 2.0, "wide": 1.0}
+# Dropped at both ends of an angle: the dissolve into and out of it
+REPLAY_EDGE_SECONDS = 0.25
 
 
 class GoalMomentRefiner:
@@ -71,7 +78,9 @@ class ShortsPlanner:
         start = max(moment - pre, floor)
         live = self._timeline.first_on_air_play(start, within=max(0.0, moment - 3.0 - start))
         start = live if live is not None else start
-        end = min(moment + post, ceiling)
+        # The logo wipe that opens a replay is not part of the live clip
+        wipe = self._timeline.first_break(moment + 1.0, post)
+        end = min(moment + post, ceiling, wipe if wipe is not None else float("inf"))
         return ClipPlan(clip["kind"], moment, start, end, clip["score"], clip["label"], floor=floor, ceiling=ceiling)
 
     def _replay_end_before(self, moment: float) -> float:
@@ -81,3 +90,31 @@ class ShortsPlanner:
     def _replay_start_after(self, moment: float) -> float:
         return min((start for start, _ in self._timeline.hidden_stretches(2.0) if start > moment + 0.5),
                    default=float("inf"))
+
+
+class ReplayAnglePicker:
+    """Picks the one replay angle (a single camera shot inside the broadcast replay) a Short ends with.
+
+    Viewers asked to see goals again; the director's replay already has the best angles, so we take
+    the shot that shows the play best: mostly goal-mouth or wide views, at least a few seconds long.
+    """
+
+    def __init__(self, timeline: BroadcastTimeline) -> None:
+        self._timeline = timeline
+
+    def pick(self, start: float, end: float, cuts: list[float]) -> tuple[float, float] | None:
+        # Replays cut between angles with dissolves the scene detector often misses, so the angle is
+        # a run of play views inside a cut-bounded shot, trimmed off the transition at both ends
+        bounds = [start] + [c for c in sorted(cuts) if start < c < end] + [end]
+        best, best_score = None, 0.0
+        for shot_start, shot_end in zip(bounds, bounds[1:]):
+            for a, b in self._timeline.runs(shot_start, shot_end, tuple(REPLAY_VIEWS)):
+                a, b = a + REPLAY_EDGE_SECONDS, b - REPLAY_EDGE_SECONDS
+                if b - a < REPLAY_MIN_SECONDS:
+                    continue
+                views = self._timeline.views_between(a, b)
+                weight = sum(REPLAY_VIEWS.get(v, 0.0) for v in views) / max(len(views), 1)
+                score = weight * min(b - a, REPLAY_MAX_SECONDS)
+                if score > best_score:
+                    best, best_score = (a, min(b, a + REPLAY_MAX_SECONDS)), score
+        return best

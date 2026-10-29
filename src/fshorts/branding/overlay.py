@@ -1,37 +1,40 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import cv2
 import numpy as np
 from PIL import Image
 
-from fshorts.branding.text import FONT_BLACK, FONT_BOLD, TextPainter, rounded_box, to_array
+from fshorts.branding.text import TextPainter, to_array
 
-# What the badge says at the moment itself, per replay label
-BADGES = {
-    "goal": "GOAL!", "shot_saved": "WHAT A SAVE", "near_miss": "SO CLOSE", "woodwork": "OFF THE POST",
-    "shot_off_target": "JUST WIDE", "shot_blocked": "BLOCKED", "skill": "SKILLS",
-}
-HOOK_SHARE = 0.45          # the reference Shorts show their hook for the first ~45%
-FADE = 0.25
-BADGE_SECONDS = 1.8
-POP_SECONDS = 0.22
-ACCENT = (255, 212, 0, 255)
+FADE = 0.2
+# Captions are on from the first frame and leave just before the moment they tease
+LEAD_IN = 0.0
+REVEAL_GAP = 0.25
+MIN_LABEL_SECONDS = 3.0
+
+
+@dataclass(frozen=True)
+class CaptionStyle:
+    """Where and how big the caption sits, measured on the most viewed reference Shorts."""
+
+    size: int = 56            # font size in px on the 1080x1920 canvas
+    y_share: float = 0.70     # vertical centre of the caption, share of the canvas height
+    label_share: float = 0.5  # a label stays up for this share of the live part
 
 
 @dataclass(frozen=True)
 class OverlaySpec:
-    home: str
-    away: str
-    score_before: tuple[int, int]
-    score_after: tuple[int, int]
-    minute: int | None
-    moment: float              # seconds from the start of the Short
+    format: str                # label, teaser, question or two_beat
+    line1: str
+    line2: str | None
+    moment: float              # seconds from the start of this part of the Short
     duration: float
-    badge: str
-    hook: str
-    caption: str               # shown in the lower band after the moment, e.g. "Richarlison 31'"
+
+    def for_replay(self, duration: float) -> OverlaySpec:
+        """The replay angle at the end runs clean, like the reference Shorts."""
+        return replace(self, line1="", line2=None, moment=0.0, duration=duration)
 
 
 class Layer:
@@ -57,65 +60,43 @@ class Layer:
 
 
 class ShortOverlay:
-    """Score bar, hook, moment badge and caption drawn over each frame of a 1080x1920 Short.
+    """One short white caption on the video itself, the way the big channels caption their Shorts.
 
-    Built once per clip (text is rasterised up front); per frame only alpha blending is left.
+    No score bar and no badge: the most viewed Shorts have neither. Text is rasterised once per clip;
+    per frame only alpha blending is left.
     """
 
-    def __init__(self, spec: OverlaySpec, size: tuple[int, int], window_top: int, window_bottom: int) -> None:
+    def __init__(self, spec: OverlaySpec, size: tuple[int, int], style: CaptionStyle = CaptionStyle()) -> None:
         self._spec = spec
+        self._style = style
         width, height = size
-        top_band = max(window_top, 160)
-        bottom_mid = (window_bottom + height) // 2 if height - window_bottom > 120 else height - 170
-        self._score_before = Layer(self._score_bar(spec.score_before), (width // 2, top_band // 2 + 10))
-        self._score_after = Layer(self._score_bar(spec.score_after, highlight=True), (width // 2, top_band // 2 + 10))
-        self._hook = self._text(spec.hook, 58, width, bottom_mid)
-        self._caption = self._text(spec.caption, 50, width, bottom_mid)
-        self._badge = Layer(self._badge_box(spec.badge), (width // 2, window_bottom - 150)) if spec.badge else None
+        y = int(style.y_share * height)
+        self._line1 = self._text(spec.line1, width, y)
+        self._line2 = self._text(spec.line2, width, y) if spec.line2 else None
+
+    def windows(self) -> list[tuple[str, float, float]]:
+        """(line, from, to) in seconds of this part."""
+        spec, style = self._spec, self._style
+        found = []
+        if spec.line1:
+            if spec.format == "label" and not spec.line2:
+                end = max(spec.duration * style.label_share, MIN_LABEL_SECONDS)
+            else:
+                end = spec.moment - REVEAL_GAP
+            found.append(("line1", LEAD_IN, min(end, spec.duration)))
+        if spec.line2:
+            found.append(("line2", spec.moment, spec.duration))
+        return [w for w in found if w[2] > w[1]]
 
     def apply(self, canvas: np.ndarray, time: float) -> np.ndarray:
-        spec = self._spec
-        changed = spec.score_after != spec.score_before and time >= spec.moment
-        (self._score_after if changed else self._score_before).blend(canvas, 1.0)
-        if self._hook is not None:
-            self._hook.blend(canvas, _window(time, 0.2, spec.duration * HOOK_SHARE))
-        since = time - spec.moment
-        if self._badge is not None and 0 <= since <= BADGE_SECONDS:
-            pop = min(1.0, 0.6 + 0.4 * since / POP_SECONDS)
-            self._badge.blend(canvas, _window(since, 0.0, BADGE_SECONDS), scale=pop)
-        if self._caption is not None and since >= 0:
-            self._caption.blend(canvas, min(1.0, since / FADE))
+        for name, start, end in self.windows():
+            layer = self._line1 if name == "line1" else self._line2
+            if layer is not None:
+                layer.blend(canvas, _window(time, start, end))
         return canvas
 
-    @staticmethod
-    def _text(text: str, size: int, width: int, y: int) -> Layer | None:
-        return Layer(TextPainter(size).render(text, width - 120), (width // 2, y)) if text else None
-
-    def _score_bar(self, score: tuple[int, int], highlight: bool = False) -> Image.Image:
-        spec = self._spec
-        teams = TextPainter(52, FONT_BOLD, shadow=False)
-        digits = TextPainter(60, FONT_BLACK, color=ACCENT if highlight else (255, 255, 255, 255), shadow=False)
-        parts = [teams.render(spec.home, 400), digits.render(f"{score[0]} - {score[1]}", 400),
-                 teams.render(spec.away, 400)]
-        if spec.minute is not None:
-            parts.append(TextPainter(40, FONT_BOLD, color=(200, 200, 200, 255), shadow=False)
-                         .render(f"{spec.minute}'", 200))
-        gap = 18
-        width = sum(p.width for p in parts) + gap * (len(parts) - 1) + 60
-        height = max(p.height for p in parts) + 20
-        bar = rounded_box((width, height), height // 2, (12, 12, 16, 200))
-        x = 30
-        for part in parts:
-            bar.alpha_composite(part, (x, (height - part.height) // 2))
-            x += part.width + gap
-        return bar
-
-    @staticmethod
-    def _badge_box(text: str) -> Image.Image:
-        label = TextPainter(76, FONT_BLACK, color=(16, 16, 16, 255), shadow=False).render(text, 1000)
-        box = rounded_box((label.width + 70, label.height + 20), 28, ACCENT)
-        box.alpha_composite(label, (35, 10))
-        return box
+    def _text(self, text: str, width: int, y: int) -> Layer | None:
+        return Layer(TextPainter(self._style.size).render(text, int(width * 0.84)), (width // 2, y)) if text else None
 
 
 def _window(time: float, start: float, end: float) -> float:

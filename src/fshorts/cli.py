@@ -18,9 +18,10 @@ from fshorts.broadcast import (
 )
 from fshorts.clipping import ClipCutter, ClipPlanner, FfmpegSceneCutDetector, SceneSnapper
 from fshorts.branding.brief import ShortBriefs
-from fshorts.branding.captions import CaptionStore, CaptionWriter
 from fshorts.branding.overlay import ShortOverlay
-from fshorts.clipping.shorts import GoalMomentRefiner, ShortsPlanner
+from fshorts.branding.writer import ShortTextStore, ShortTextWriter
+from fshorts.facts.model import MatchFacts
+from fshorts.clipping.shorts import GoalMomentRefiner, ReplayAnglePicker, ShortsPlanner
 from fshorts.config import AppConfig
 from fshorts.evaluation import GoalDetectionEvaluator, GoalRecallEvaluator, GroundTruth
 from fshorts.events import (
@@ -48,6 +49,7 @@ from fshorts.scoreboard import (
 from fshorts.reframe.balldata import BallPseudoLabeler, CocoTileWriter
 from fshorts.reframe import (
     BlurFitRenderer,
+    concat,
     CachedDetections,
     LanczosUpscaler,
     RealEsrganUpscaler,
@@ -242,12 +244,10 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
     video = Path(args.video)
     match = prober.probe(video)
     size = (match.width, match.height)
-    for clip in clips:
-        if clip["id"] in rated:
-            continue
-        start, end = clip["start"], clip["end"]
-        target = (workspace.shorts_dir if args.profile == "short" else workspace.vertical_dir) / clip["file"]
-        cache = CachedDetections(workspace.detections_dir / f"{clip['id']}_{args.profile}.json")
+    def render(clip: dict, start: float, end: float, name: str, target: Path, overlay_of) -> str:
+        nonlocal detector
+        # Detection times are relative to the start, so the window is part of the key
+        cache = CachedDetections(workspace.detections_dir / f"{name}_{start:.2f}_{end:.2f}.json")
         detections = cache.load()
         if detections is None:
             detector = detector or RfDetrDetector(ball_weights=out.ball_weights)
@@ -259,18 +259,38 @@ def _cmd_vertical(args: argparse.Namespace) -> int:
         shot_cuts = [c - start for c in cuts.cuts(video, start, end)]
         path = CropPathPlanner(*size, out.smooth_seconds).plan(detections, shot_cuts)
         if out.layout != "blur" and path.coverage >= out.min_coverage:
-            overlay = None
-            if briefs is not None:
-                spec, caption = briefs.brief(clip)
-                overlay = ShortOverlay(spec, (out.width, out.height), *crop.window_band())
-                clip.update(title=caption.title, hook=caption.hook, player=caption.player)
-            crop.render(video, start, end, path, size, match.fps, target, overlay)
+            crop.render(video, start, end, path, size, match.fps, target, overlay_of())
             inside = path.ball_inside(crop.crop_width(match.height))
-            how = (f"{out.layout}, ball seen {path.ball_coverage:.0%}"
-                   + (f", in frame {inside:.0%}" if inside is not None else ""))
+            return (f"{out.layout}, ball seen {path.ball_coverage:.0%}"
+                    + (f", in frame {inside:.0%}" if inside is not None else ""))
+        blur.render(video, start, end, target)
+        return f"blur, followed {path.coverage:.0%}"
+
+    for clip in clips:
+        if clip["id"] in rated:
+            continue
+        target = (workspace.shorts_dir if args.profile == "short" else workspace.vertical_dir) / clip["file"]
+        brief = briefs.brief(clip) if briefs is not None else None
+        if brief is not None:
+            text = brief[1]
+            clip.update(title=text.title, hook=text.line1, punch=text.line2, text_format=text.format,
+                        player=text.player)
+
+        def live_overlay():
+            return ShortOverlay(brief[0], (out.width, out.height), config.captions) if brief else None
+
+        replay = clip.get("replay") if args.profile == "short" else None
+        if replay is None:
+            how = render(clip, clip["start"], clip["end"], clip["id"], target, live_overlay)
         else:
-            blur.render(video, start, end, target)
-            how = f"blur, followed {path.coverage:.0%}"
+            live, again = target.with_suffix(".live.mp4"), target.with_suffix(".replay.mp4")
+            how = render(clip, clip["start"], clip["end"], clip["id"], live, live_overlay)
+            replay_overlay = (lambda: ShortOverlay(brief[0].for_replay(replay[1] - replay[0]),
+                                                   (out.width, out.height), config.captions)) if brief else (lambda: None)
+            how += " + replay " + render(clip, replay[0], replay[1], f"{clip['id']}_replay", again, replay_overlay)
+            concat([live, again], target)
+            live.unlink()
+            again.unlink()
         print(f"  {clip['id']}  {how}")
     if args.profile == "short":
         workspace.shorts.write_text(json.dumps(clips, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -283,22 +303,37 @@ def _briefs(workspace: MatchWorkspace) -> ShortBriefs:
     readings = [ScoreReading.from_dict(r) for r in _load_json(workspace.score_readings, "goals")]
     goals = [ScoreChange.from_dict(g) for g in _load_json(workspace.goals, "goals")["goals"]]
     words = [Word(**w) for w in _load_json(workspace.transcript, "candidates")]
-    return ShortBriefs(readings, goals, words, lambda: CaptionWriter(QwenGenerator()), CaptionStore(workspace.captions))
+    facts = MatchFacts.load(workspace.facts) if workspace.facts.is_file() else None
+    if facts is None:
+        print("  no facts.json (fshorts facts): captions will not name players", file=sys.stderr)
+    return ShortBriefs(readings, goals, words, facts,
+                       lambda squad: ShortTextWriter(QwenGenerator(max_new_tokens=500), squad),
+                       ShortTextStore(workspace.short_texts))
 
 
 def _short_windows(config: AppConfig, workspace: MatchWorkspace, clips: list[dict]) -> list[dict]:
     """Goal, chance and skill clips cut down to Short length around the moment itself."""
     timeline = BroadcastTimeline.from_dict(_load_json(workspace.broadcast, "moments"))
     planner = ShortsPlanner(config.shorts, timeline, GoalMomentRefiner.from_wav(workspace.audio))
-    snapper = SceneSnapper(FfmpegSceneCutDetector(), SHORT_SNAP_SECONDS)
+    cuts = FfmpegSceneCutDetector()
+    snapper = SceneSnapper(cuts, SHORT_SNAP_SECONDS)
+    angles = ReplayAnglePicker(timeline)
+    # Each goal or chance clip is followed by its broadcast replay, which shares its anchor
+    replays = {(c["kind"].removesuffix("_replay"), c["anchor"]): c for c in clips if c["kind"].endswith("_replay")}
     shorts = []
     for clip in clips:
         plan = planner.plan(clip)
         if plan is None:
             continue
         plan = snapper.snap(workspace.video, plan)
-        shorts.append({**clip, "anchor": round(plan.anchor, 2), "start": round(plan.start, 2),
-                       "end": round(plan.end, 2)})
+        short = {**clip, "anchor": round(plan.anchor, 2), "start": round(plan.start, 2), "end": round(plan.end, 2)}
+        source = replays.get((clip["kind"], clip["anchor"])) if config.shorts.replay else None
+        if source is not None:
+            angle = angles.pick(source["start"], source["end"],
+                                cuts.cuts(workspace.video, source["start"], source["end"]))
+            if angle is not None:
+                short["replay"] = [round(angle[0], 2), round(angle[1], 2)]
+        shorts.append(short)
     workspace.shorts.write_text(json.dumps(shorts, ensure_ascii=False, indent=1), encoding="utf-8")
     return shorts
 
@@ -348,6 +383,24 @@ def _cmd_run(args: argparse.Namespace) -> int:
             print(f"stopped at {name}", file=sys.stderr)
             return 1
     print(f"done in {(time.perf_counter() - started) / 60:.1f} min; rate them with: fshorts studio")
+    return 0
+
+
+def _cmd_compare(args: argparse.Namespace) -> int:
+    from fshorts.studio.ratings import compare, reason_counts
+
+    config = AppConfig.load(Path(args.config))
+    old_store, new_store = RatingStore(Path(args.old)), RatingStore(config.paths.labels / "shorts")
+    old, new = {}, {}
+    for listing in sorted(Path(args.old).glob("*.json")):
+        # Clip ids repeat across matches, so the match is part of the key
+        old |= {f"{listing.stem}/{k}": v for k, v in old_store.load(listing.stem).items()}
+        new |= {f"{listing.stem}/{k}": v for k, v in new_store.load(listing.stem).items()}
+    print(f"{'kind':<8}{'pairs':>6}{'old':>7}{'new':>7}{'better':>8}{'worse':>7}")
+    for row in compare(old, new):
+        print(f"{row.kind:<8}{row.pairs:>6}{row.old_stars:>7.2f}{row.new_stars:>7.2f}{row.better:>8}{row.worse:>7}")
+    for name, ratings in (("old", old), ("new", new)):
+        print(f"{name} reasons:", ", ".join(f"{k} {v}" for k, v in reason_counts(ratings).items()) or "-")
     return 0
 
 
@@ -411,6 +464,40 @@ def _cmd_evaluate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_facts(args: argparse.Namespace) -> int:
+    from fshorts.facts.wiki import WikipediaPages, parse_match
+
+    config = AppConfig.load(Path(args.config))
+    workspace = MatchWorkspace(config.paths.outputs, Path(args.video))
+    wikitext = WikipediaPages(Path("data/cache/wiki")).raw(args.page)
+    facts = parse_match(wikitext, args.home, args.away, args.home_name or "", args.away_name or "")
+    facts.save(workspace.facts)
+    for team in (facts.home, facts.away):
+        print(f"{team.code}: {', '.join(f'{p.number} {p.name}' for p in team.players)}")
+    for goal in facts.goals:
+        added = f"+{goal.added}" if goal.added else ""
+        print(f"  {goal.minute}{added}' {goal.team} {goal.scorer} {goal.note}".rstrip())
+    return 0
+
+
+def _cmd_reftexts(args: argparse.Namespace) -> int:
+    from fshorts.references.extractor import ReferenceTextExtractor
+
+    out = Path(args.out)
+    done = json.loads(out.read_text(encoding="utf-8")) if out.is_file() else {}
+    extractor = ReferenceTextExtractor(FrameSampler(), FfprobeProber(), fps=args.fps)
+    videos = sorted(p for folder in args.folders for p in Path(folder).glob("*.mp4"))
+    for number, video in enumerate(videos, 1):
+        if video.stem in done:
+            continue
+        duration, texts = extractor.extract(video)
+        done[video.stem] = {"duration": round(duration, 2), "texts": [t.to_dict() for t in texts]}
+        captions = [t.text for t in texts if t.role == "caption"]
+        print(f"[{number}/{len(videos)}] {video.stem}: {' | '.join(captions) or '-'}")
+        out.write_text(json.dumps(done, ensure_ascii=False, indent=1), encoding="utf-8")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="fshorts")
     parser.add_argument("--config", default=str(DEFAULT_CONFIG))
@@ -468,6 +555,25 @@ def build_parser() -> argparse.ArgumentParser:
     studio.add_argument("--host", default="127.0.0.1", help="0.0.0.0 to open it from a phone on the same Wi-Fi")
     studio.add_argument("--no-browser", action="store_true")
     studio.set_defaults(handler=_cmd_studio)
+
+    compare = commands.add_parser("compare", help="ratings of the current Shorts against an archived version")
+    compare.add_argument("--old", default="data/labels/human/shorts_v1", help="folder of the older ratings")
+    compare.set_defaults(handler=_cmd_compare)
+
+    facts = commands.add_parser("facts", help="line-ups and scorers of the match from its Wikipedia page")
+    facts.add_argument("video")
+    facts.add_argument("--page", required=True, help='page with the match box, e.g. "2018 FIFA World Cup Group B"')
+    facts.add_argument("--home", required=True, help="team code in the match box, e.g. POR")
+    facts.add_argument("--away", required=True)
+    facts.add_argument("--home-name")
+    facts.add_argument("--away-name")
+    facts.set_defaults(handler=_cmd_facts)
+
+    reftexts = commands.add_parser("reftexts", help="measure the captions of reference Shorts (text, place, timing)")
+    reftexts.add_argument("folders", nargs="+")
+    reftexts.add_argument("--out", default="data/references/texts.json")
+    reftexts.add_argument("--fps", type=float, default=2.0, help="OCR rate; captions stay up for seconds")
+    reftexts.set_defaults(handler=_cmd_reftexts)
 
     review = commands.add_parser("review", help="accept or reject cut clips (training labels)")
     review.add_argument("video")

@@ -113,6 +113,19 @@ class VerticalCropRenderer:
         return canvas
 
 
+def concat(parts: list[Path], target: Path, binary: str = "ffmpeg") -> Path:
+    """Joins parts encoded with identical settings without re-encoding them."""
+    listing = target.with_suffix(".txt")
+    lines = [f"file '{p.resolve().as_posix()}'" for p in parts]
+    listing.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    try:
+        subprocess.run([_ffmpeg(binary), "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing),
+                        "-c", "copy", "-movflags", "+faststart", str(target)], check=True)
+    finally:
+        listing.unlink(missing_ok=True)
+    return target
+
+
 def blurred_cover(image: np.ndarray, size: tuple[int, int]) -> np.ndarray:
     """The image scaled to cover `size`, centre-cropped, blurred and darkened (blurred small, so it is cheap)."""
     out_w, out_h = size

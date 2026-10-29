@@ -73,9 +73,9 @@ class TextGenerator(ABC):
 
 
 class QwenGenerator(TextGenerator):
-    """Local Qwen3 (Apache-2.0) through transformers, thinking mode off."""
+    """Local Qwen3 (Apache-2.0) through transformers; thinking mode only when asked for."""
 
-    def __init__(self, model_name: str = "Qwen/Qwen3-8B", max_new_tokens: int = 120) -> None:
+    def __init__(self, model_name: str = "Qwen/Qwen3-8B", max_new_tokens: int = 120, thinking: bool = False) -> None:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -83,15 +83,18 @@ class QwenGenerator(TextGenerator):
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._model = AutoModelForCausalLM.from_pretrained(model_name, dtype=torch.bfloat16, device_map="cuda")
         self._max_new_tokens = max_new_tokens
+        self._thinking = thinking
 
     def generate(self, prompt: str) -> str:
         text = self._tokenizer.apply_chat_template(
-            [{"role": "user", "content": prompt}], tokenize=False, add_generation_prompt=True, enable_thinking=False
+            [{"role": "user", "content": prompt}], tokenize=False, add_generation_prompt=True,
+            enable_thinking=self._thinking,
         )
         inputs = self._tokenizer(text, return_tensors="pt").to(self._model.device)
         with self._torch.no_grad():
             output = self._model.generate(**inputs, max_new_tokens=self._max_new_tokens, do_sample=False)
-        return self._tokenizer.decode(output[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+        answer = self._tokenizer.decode(output[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+        return answer.split("</think>")[-1]
 
 
 class ReplayEventClassifier:

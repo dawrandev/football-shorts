@@ -151,3 +151,41 @@ Mediana: goldan oldin 12.7 s, keyin 3 s, jami ~16 s. Hook klipning birinchi ~45%
 5. O'yinchi nomi tegi: tracker va ism bor, qo'shish mumkin.
 6. Spotlight doira va sekinlashtirish: skill va xavfli vaziyatlar uchun.
 7. Layout: foydalanuvchi keng kadrni yoqtirgan, top Shorts esa to'liq 9:16. Ikkalasini baholash saytida solishtirish kerak.
+
+## 10. Yozuvlar dataseti (T1, 2026-10-29)
+
+**Manba.** Top-29 ro'yxatiga yana 170 ta eng ko'p ko'rilgan Short qo'shildi, ular o'sha 12 kanaldan olindi. Jami 199 ta video.
+- O'yin lahzalari maysa ulushi bo'yicha ajratildi (`pitch_share` > 0.3): 103 ta.
+- Bu Shorts'dagi har bir yozuv `fshorts reftexts` buyrug'i bilan o'lchandi (EasyOCR, 2 fps). Har bir yozuvning matni, joyi, o'lchami, chiqish va yo'qolish vaqti olindi.
+- Yozuv videoning ustiga keyin qo'shilganmi yoki stadiondagi reklama yoki formadagi yozuvmi, shu bilan ajratiladi: qo'shilgan yozuv kadrda qimirlamaydi va oq rangda bo'ladi.
+- Tozalangan ro'yxat (47 ta yozuv) `docs/research/reference_captions.json` faylida.
+
+**Asosiy raqamlar:**
+
+| O'lchov | Natija |
+|---|---|
+| Yozuvi bor Shorts | 103 tadan ~50 tasi. Qolgan yarmida umuman yozuv yo'q |
+| Turi | label 30 (64%), teaser 7 (15%), two_beat 6 (13%), savol 4 (9%) |
+| Chiqish vaqti | deyarli hammasi **0.0 s** da, birinchi kadrdan |
+| Label qancha turadi | mediana 4.5 s, klipning ~44% qismi. 30 tadan 11 tasi butun klip davomida turadi |
+| Balandlik (markaz) | eng ko'p uchraydigani **0.70** (UEFA'ning doimiy joyi). PSG 0.79. PL turlicha: 0.3–0.75. Mediana 0.58 |
+| Shrift | OCR qutisi kadrning 3.3–4.8% qismi. Bizning 1080×1920 kanvasda bu ~56 px Segoe UI Bold |
+| Uzunlik | mediana 4 so'z, eng ko'pi 10. Uzun yozuv ikki qatorga bo'linadi |
+| Emoji | 47 tadan 21 tasida, faqat qator oxirida, bitta |
+| KATTA HARF | 7 tasida bitta so'z urg'u uchun: NOWHERE, EVERYTHING, INCREDIBLE, PASSION, THAT |
+
+**Eng ko'p uchraydigan qoliplar:**
+- **"X's <narsa>":** "Harry Kane's goal-kick 🤯", "Dominik Szoboszlai's recovery speed", "Carlos Baleba's Man Utd debut".
+- **"This <X> move/assist":** "This Paris team move 👏", "This Harry Kane assist 🤯", "This Galatasaray move! 🔥".
+- **"Pure <X>":** "Pure chaos", "Pure PASSION from Declan Rice".
+- **Bir so'zli baho:** "Iconic.", "Impossible".
+- **Teaser:** "Wait for Doué's reaction 🤣", "The score… 👀", "Incredible pass incoming", "Something bizarre is about to happen to…".
+- **Savol:** "Most satisfying finish ever? 😮‍💨", "How close was this from David Raya?".
+- **Ikki bosqich:** "Try to take the ball off João Neves" → "Impossible". "Nottingham Forest are looking for an equaliser…" → "Konsa said 🙅".
+
+**Bizning qarorlar:**
+1. Yozuv 0 s da chiqadi va videoning ustida, 0.70 balandlikda turadi. Shrift 56 px, qalin oq, yumshoq soya bilan, quti yo'q.
+2. Label klipning taxminan 50% qismida turadi. Teaser, savol va ikki bosqichli matnning birinchi qatori lahzadan oldin yo'qoladi. Ikkinchi qator lahzada chiqadi.
+3. Model to'rt turda variant yozadi: label, teaser, savol, two_beat. Har biri faktlar bilan tekshiriladi.
+4. Ism faqat jamoa tarkibidan olinadi. Tasdiqlanmagan ism yozilmaydi: "This move", "He".
+5. Hisob paneli olib tashlanadi. Top Shorts'da u yo'q yoki telekanalning o'z paneli qoladi.

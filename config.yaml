@@ -23,7 +23,7 @@ output:
   smooth_seconds: 0.6   # camera smoothing per shot
   min_coverage: 0.5     # share of samples where the ball/players were found, else blur layout
   ball_weights: models/ball/checkpoint_best_total.pth   # our fine-tuned ball detector (fshorts trainball)
-  window_aspect: 0.8    # width/height of the followed window in the wide layout (4:5)
+  window_aspect: 0.92   # width/height of the followed window in the wide layout; viewers asked for wider
   upscaler: realesrgan  # lanczos | realesrgan (sharper, removes compression blocks)
   sr_weights: models/realesr-general-x4v3.pth
 
@@ -72,9 +72,16 @@ scoreboard:
 # (median: opens 12.7 s before the goal, ends ~3 s after it on one reaction shot)
 shorts:
   goal_pre: 12.0
-  goal_post: 8.0      # viewers marked "ends early" on 4 s; the celebration needs room
-  chance_pre: 9.0
-  chance_post: 4.0    # still stops where the replay starts
+  goal_post: 10.0     # "ends early" was the top rating reason; stops earlier at the replay or a logo wipe
+  chance_pre: 11.0    # chances were marked "starts late"
+  chance_post: 4.0
+  replay: true        # end each Short with one broadcast replay angle (asked for on goals)
+
+# On-screen caption, measured on the most viewed reference Shorts (docs/research, section 10)
+captions:
+  size: 56            # px on the 1080x1920 canvas, ~4% of the height like the references
+  y_share: 0.70       # UEFA's spot, below the action
+  label_share: 0.5    # a label stays up for the first half of the live part
 
 paths:
   matches: data/matches

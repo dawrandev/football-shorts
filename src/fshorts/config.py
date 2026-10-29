@@ -5,6 +5,8 @@ from pathlib import Path
 
 import yaml
 
+from fshorts.branding.overlay import CaptionStyle
+
 
 @dataclass(frozen=True)
 class ClipConfig:
@@ -101,6 +103,7 @@ class ShortTiming:
     goal_post: float = 4.0      # ... and ends ~3 s after it, on one reaction shot
     chance_pre: float = 9.0
     chance_post: float = 2.0
+    replay: bool = True         # end the Short with one broadcast replay angle of the moment
 
 
 @dataclass(frozen=True)
@@ -111,6 +114,7 @@ class AppConfig:
     scoreboard: ScoreboardConfig
     paths: PathsConfig
     shorts: ShortTiming = ShortTiming()
+    captions: CaptionStyle = CaptionStyle()
 
     LAYOUTS = ("crop", "wide", "blur")
 
@@ -124,6 +128,7 @@ class AppConfig:
             scoreboard=ScoreboardConfig.from_dict(raw["scoreboard"]),
             paths=PathsConfig(**{k: Path(v) for k, v in raw["paths"].items()}),
             shorts=ShortTiming(**raw.get("shorts", {})),
+            captions=CaptionStyle(**raw.get("captions", {})),
         )
         config._validate()
         return config

@@ -27,3 +27,6 @@ datasets/
 .env
 .idea/
 .vscode/
+
+# Downloaded pages (Wikipedia)
+data/cache/

@@ -240,6 +240,123 @@ Asosiy muammo: "xavfli vaziyat" kliplarining ~70% i bo'sh edi. Sharhlovchi stati
   - Telefondan ochish uchun `--host 0.0.0.0`.
 - **Ma'lum kamchilik:** 8B model ba'zan ismlarni chalkashtiradi ("Saved by Wang Yi-chan"). Keyingi qadam: jamoa tarkibi bilan tekshirish.
 
+## 3h. M6 — matn va ko'rinish, baholar asosida (reja, 2026-10-29)
+
+**Baholar xulosasi (48 Short, 3 match):**
+
+| Ko'rsatkich | Natija |
+|---|---|
+| O'rtacha baho | gol **4.4**, xavfli vaziyat **2.8**, skill 3.0 |
+| Eng ko'p belgi | `ends_early` 25, `good_cut` 24, `boring` 9, `ball_lost` 6, `wrong_text` 6, `starts_late` 6 |
+| Izohlar | 6 ta golda "takroriy lavha kerak", 5 tasida "ozgina wide kerak" |
+| Hisob paneli | yoqmadi |
+
+**Noto'g'ri matnlarning sababi.** Ismlar faqat sharhdan olinadi, model esa ularni tekshirmaydi.
+- Gol muallifi xato chiqqan: Nacho golida "Isco's shot!" yozilgan.
+- "Ramos saved!" yozilgan, vaholanki Ramos himoyachi.
+- Ism o'rniga "the goalkeeper" chiqqan.
+- Ikki ism qo'shilib ketgan: "Bremer Cho".
+- Griezmannning bu birinchi goli edi, lekin "strikes again" deb yozilgan.
+
+Hooklar bir xil shablonda: "X's shot! ⚽", "X misses! 😱".
+
+**Top-30 Shorts bilan farq (kadrlar yonma-yon solishtirildi):**
+- **Matn joyi.** Ularda matn videoning o'zida, kadr balandligining ~55–70% qismida turadi. Bitta qisqa qalin oq qator, ostida yengil soya bor, quti yo'q.
+- **Kadr.** Ularda hisob paneli, xira bandlar va GOAL belgisi yo'q. Bizda esa yuqorida hisob paneli bor, matn pastki xira bandda katta yozilgan.
+
+### Qadamlar
+
+**T1. Matn namunalari dataseti.**
+- **Ma'lumot yig'ish.** 29 ta top Short'dan har 0.25 soniyada OCR olinadi. Har bir yozuv uchun quyidagilar saqlanadi:
+  - so'zlari va emoji;
+  - kadrdagi joyi (y%, x%);
+  - shrift balandligi (kadrga nisbatan %);
+  - qachon chiqib, qachon yo'qolishi (lahzaga nisbatan);
+  - bir yoki ikki qatorligi.
+- **Turlarga ajratish.** Har bir yozuv bir turga kiritiladi:
+  - *label*: "Iconic.";
+  - *teaser*: "Wait for…";
+  - *setup → punchline*: "Try to take the ball off…" → "Impossible";
+  - *ism tegi*;
+  - *sanoq*.
+- **Kengaytirish.** Ro'yxat 30 tadan ~80 tagacha kengaytiriladi: o'sha 12 kanaldan, faqat o'yin lahzalari olinadi. Aks holda turlar va so'zlar xilma-xilligi kam bo'ladi.
+- **Natija.** `data/references/top/texts.json` fayli va tahlil hujjatining 10-bo'limi.
+
+**T2. Faktlar varag'i: har bir lahza uchun tekshirilgan ma'lumot.**
+- **Jamoa tarkibi.** Match uchun ikkala jamoaning tarkibi (ism, raqam, pozitsiya) olinadi. Manba Wikipedia, natija `data/matches/<id>.lineups.json` ga yoziladi.
+- **Ismlarni tekshirish.** Sharhdagi ism tarkib bilan fuzzy solishtiriladi. Tarkibda topilmagan ism matnga yozilmaydi.
+- **Rollarni tekshirish.** "Save" faqat darvozabonga, "scores" faqat gol muallifiga yoziladi. Gol muallifi hisob o'zgarishi va sharhdagi "scored by" bilan tasdiqlanadi.
+- **Kontekst.** Qo'shimcha faktlar hisoblanadi:
+  - o'yinchining shu matchdagi nechanchi goli ("again" faqat 2-golda);
+  - tenglashtirdimi, oldinga chiqardimi;
+  - kech gol (80+ daqiqa);
+  - masofa (to'p modelidan, keyinchalik).
+
+**T3. Yangi matn yozuvchi.**
+- **Matn turi.** Lahza turi bo'yicha tanlanadi:
+  - gol: label yoki teaser;
+  - seyv: "X foot save 🤯" uslubi;
+  - skill: setup → punchline.
+- **Prompt.** Unga faqat faktlar varag'i va T1'dan shu turdagi 8–10 ta haqiqiy namuna beriladi.
+- **Tekshiruv.** Model 4 ta variant yozadi va har biri qoidalardan o'tkaziladi:
+  - ≤ 6 so'z, 1 emoji;
+  - ism tarkibda bor;
+  - natija oldindan aytilmaydi;
+  - "again" va "last gasp" faqat fakt bo'lsa.
+
+  Qoidadan o'tgan eng yaxshi variant tanlanadi.
+- **Ikki bosqichli matn.** Ikkinchi qator lahza paytida chiqadi.
+
+**T4. Yangi ko'rinish.**
+- **Olib tashlanadi:** hisob paneli va katta lahza belgisi (GOAL!, WHAT A SAVE).
+- **Matn uslubi.** Matn video ustiga, ~60% balandlikka tushadi. Shrift kichikroq va qalin, rangi oq, ostida yumshoq soya. Ko'rinish vaqti T1'dagi o'lchovlardan olinadi.
+- **Hisob.** Kerak bo'lsa, hisob matnning ichida bo'ladi: "1-1 in the 88th 😮". Bu sozlamada yoqib-o'chiriladi.
+- **Kanal belgisi.** Burchakka kichik logotip qo'yish ixtiyoriy, logotip bo'lsa qo'yiladi.
+
+**T5. Videodagi tuzatishlar (baholardan).**
+- **Gol takrori.** Gol klipidan keyin eng yaxshi burchakdagi bitta takror qo'shiladi, sekinlashtirilgan holda. Takror topish (`replay_events`) allaqachon bor.
+- **Gol oxiri.** Gol tugaganidan keyin quvonishdan keyingi kadr almashguncha davom ettiriladi. Hozir esa qat'iy 8 soniya.
+- **Kenglik.** Kadr ~15% kengroq olinadi, chunki "ozgina wide kerak" degan izoh 5 ta bo'lgan.
+- **Xavfli vaziyatlar.** Kamroq va kuchliroqlari qoladi: faqat takrori bor zarba yoki seyvlar. Boshi 2–3 soniya oldinroq olinadi (`starts_late` belgisi).
+
+**T6. Baholash.**
+- **Matnni alohida baholash.** Studiyaga matn uchun alohida belgilar qo'shiladi: `wrong_name`, `boring_text`, `text_too_big`, `bad_timing`.
+- **A/B solishtirish.** Bir xil Short ikki matn varianti bilan ko'rsatiladi, siz yoqqanini tanlaysiz. Bu matn modeli uchun dataset bo'ladi.
+- **Qayta baholash.** Yangi versiyalar qayta render qilinadi va siz ularni yana baholaysiz.
+
+**Tugadi degani:**
+- `wrong_text` 0 ta.
+- Gollar o'rtacha ≥ 4.5, xavfli vaziyatlar ≥ 3.5.
+- A/B'da yangi matn eskisidan ko'p tanlanadi.
+
+**Tartib:** T1 → T2 → T3 → T4. T5 parallel bajariladi, T6 eng oxirida.
+
+### Holat (2026-10-29)
+
+T1–T6 kodi tayyor, 48 Short v2 bo'lib qayta render qilindi. v1 va uning baholari arxivda turibdi:
+- videolar `data/outputs/<id>/shorts_v1/`, ro'yxat `shorts_v1.json`;
+- baholar `data/labels/human/shorts_v1/`.
+
+**Matn.**
+- **Faktlar.** Ismlar endi Wikipedia faktlaridan olinadi (`fshorts facts`).
+- **Model.** Qwen3-8B 4 ta variant yozadi, ular `branding/rules.py` qoidalaridan o'tkaziladi. Qoidalar quyidagilarni rad etadi:
+  - begona o'yinchi va noma'lum ism;
+  - faktda yo'q da'vo;
+  - butun qator KATTA harfda;
+  - "lead" so'zining boshqa jamoaga berilishi;
+  - aut, burchak va daqiqalar;
+  - teaser bo'lgan ikkinchi qator;
+  - bir matchda qaytarilgan qator.
+- **Hammasi rad etilsa.** Model sabablar bilan yana bir marta so'raladi. Bu ham o'tmasa, story asosidagi zaxira qator qo'yiladi: "X hat-trick 🤯", "X levels it 🤯".
+
+**Takror lavha.** Burchak endi sahna kesimlariga emas, wide/goalmouth kadrlarining uzluksiz qatoriga qarab tanlanadi. Takror bor Short'lar soni POR–ESP'da 3/14 dan 10/14 ga chiqdi.
+
+**Studiya.** Matn uchun yangi belgilar qo'shildi: `good_text`, `wrong_name`, `boring_text`, `text_timing`, `text_size`, `good_replay`.
+
+**A/B.** `fshorts compare` v1 va v2 baholarini bir xil klip bo'yicha solishtiradi.
+
+**Qoldi.** Siz v2 ni baholaysiz, so'ng `fshorts compare` natijasi "Tugadi degani" mezonlari bilan solishtiriladi.
+
 ## 4. Xatarlar
 
 - **Hisob paneli har telekanalda turlicha.** ROI preset'lar bilan hal qilinadi. Yangi telekanal = yangi preset.

@@ -2,33 +2,48 @@ from __future__ import annotations
 
 from bisect import bisect_left
 
-from fshorts.branding.captions import Caption, CaptionStore, CaptionWriter
-from fshorts.branding.overlay import BADGES, OverlaySpec
+from fshorts.branding.overlay import OverlaySpec
+from fshorts.branding.writer import ShortText, ShortTextStore, ShortTextWriter
 from fshorts.events.commentary import Word
+from fshorts.facts.model import MatchFacts, fold
+from fshorts.facts.sheet import MomentFacts, MomentFactsBuilder
 from fshorts.scoreboard import ScoreChange, ScoreReading
+
+# Commentary given to the writer for the mood of the moment
+COMMENTARY_BEFORE = 12.0
+COMMENTARY_AFTER = 8.0
 
 
 class ShortBriefs:
-    """Everything a Short shows on screen: teams, score, minute, badge, hook and caption.
+    """Everything a Short shows on screen: its caption lines, from facts we trust.
 
-    Teams, score and clock come from the score bug readings; the hook, title and scorer from the
-    caption writer (an LLM over the commentary), cached per clip so re-renders stay identical.
+    Teams, score and clock come from the score bug readings, names and scorers from the match facts
+    (line-ups and goals); the language model only phrases them, and every line it writes is checked.
+    Texts are cached per clip so re-renders stay identical.
     """
 
     def __init__(self, readings: list[ScoreReading], goals: list[ScoreChange], words: list[Word],
-                 writer_factory, store: CaptionStore) -> None:
+                 facts: MatchFacts | None, writer_factory, store: ShortTextStore) -> None:
         self._readings = sorted(readings, key=lambda r: r.time)
         self._times = [r.time for r in self._readings]
-        self._goals = goals
+        self._goals = sorted(goals, key=lambda g: g.time)
         self._words = words
+        self._facts = facts
+        self._builder = MomentFactsBuilder(facts)
         self._writer_factory = writer_factory
-        self._writer: CaptionWriter | None = None
+        self._writer: ShortTextWriter | None = None
         self._store = store
-        self._captions = store.load()
+        self._texts = store.load()
+
+    def squad(self) -> set[str]:
+        if self._facts is None:
+            return set()
+        return {part for team in (self._facts.home, self._facts.away) for p in team.players
+                for part in fold(p.name).split() + fold(p.full).split()}
 
     def prepare(self, clips: list[dict]) -> None:
-        """Writes every missing caption up front, then frees the language model for the renderers."""
-        for clip in clips:
+        """Writes every missing text up front, then frees the language model for the renderers."""
+        for clip in sorted(clips, key=lambda c: c["start"]):
             self.brief(clip)
         if self._writer is not None:
             self._writer = None
@@ -39,32 +54,34 @@ class ShortBriefs:
             gc.collect()
             torch.cuda.empty_cache()
 
-    def brief(self, clip: dict) -> tuple[OverlaySpec, Caption]:
+    def brief(self, clip: dict) -> tuple[OverlaySpec, ShortText]:
+        text = self._text(clip)
+        spec = OverlaySpec(text.format, text.line1, text.line2, clip["anchor"] - clip["start"],
+                           clip["end"] - clip["start"])
+        return spec, text
+
+    def facts_of(self, clip: dict) -> MomentFacts:
         moment = clip["anchor"]
         reading = self._reading_near(moment)
         home, away = (reading.home_code, reading.away_code) if reading else ("HOME", "AWAY")
-        before = after = reading.score if reading else (0, 0)
-        if clip["kind"] == "goal":
-            goal = min(self._goals, key=lambda g: abs(g.time - moment), default=None)
-            if goal is not None:
-                before, after = goal.before, goal.after
         minute = self._minute(moment)
-        caption = self._caption(clip, moment, home, away, before, after, minute)
-        kind = clip["kind"] if clip["kind"] == "goal" else clip["label"].split(":")[0].strip()
-        player = caption.player or (clip["label"].split(":", 1)[1].strip() if ":" in clip["label"] else None)
-        line = f"⚽ {player} {minute}'" if clip["kind"] == "goal" and player else (player or "")
-        spec = OverlaySpec(home, away, before, after, minute, moment - clip["start"], clip["end"] - clip["start"],
-                           BADGES.get(kind, ""), caption.hook, line)
-        return spec, caption
+        if clip["kind"] == "goal" and self._goals:
+            goal = min(self._goals, key=lambda g: abs(g.time - moment))
+            return self._builder.goal(self._goals.index(goal), goal.before, goal.after, minute, home, away)
+        kind, _, named = clip["label"].partition(":")
+        kind = "skill" if clip["kind"] == "skill" else kind.strip()
+        return self._builder.chance(kind, named.strip() or None, minute, home, away)
 
-    def _caption(self, clip, moment, home, away, before, after, minute) -> Caption:
-        if clip["id"] not in self._captions:
-            self._writer = self._writer or self._writer_factory()
-            kind = clip["kind"] if clip["kind"] == "goal" else clip["label"].split(":")[0].strip()
-            self._captions[clip["id"]] = self._writer.write(kind, moment, self._words, home, away, before, after,
-                                                            minute)
-            self._store.save(self._captions)
-        return self._captions[clip["id"]]
+    def _text(self, clip: dict) -> ShortText:
+        if clip["id"] not in self._texts:
+            self._writer = self._writer or self._writer_factory(self.squad())
+            self._texts[clip["id"]] = self._writer.write(self.facts_of(clip), self._commentary(clip["anchor"]))
+            self._store.save(self._texts)
+        return self._texts[clip["id"]]
+
+    def _commentary(self, moment: float) -> str:
+        words = [w.text for w in self._words if moment - COMMENTARY_BEFORE <= w.start <= moment + COMMENTARY_AFTER]
+        return " ".join(words)
 
     def _reading_near(self, time: float) -> ScoreReading | None:
         if not self._readings:
